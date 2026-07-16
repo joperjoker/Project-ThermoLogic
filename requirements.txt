@@ -1,2 +1,3 @@
 torch
 numpy
+matplotlib   # only needed to regenerate the paper's figures via experiments.py
