@@ -21,7 +21,7 @@ This module holds the two neural halves of the hybrid architecture:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 import torch
 from torch import Tensor, nn
@@ -34,6 +34,8 @@ __all__ = [
     "EBMOutput",
     "ThermoLogicLoss",
     "LossBreakdown",
+    "repair_beliefs",
+    "RepairResult",
 ]
 
 
@@ -306,3 +308,115 @@ class ThermoLogicLoss(nn.Module):
             rule_energy=rule_energy.detach(),
             parsimony=parsimony.detach(),
         )
+
+
+@dataclass
+class RepairResult:
+    """Outcome of test-time energy repair (:func:`repair_beliefs`).
+
+    Attributes
+    ----------
+    beliefs:
+        ``(batch, num_atoms)`` repaired belief state.
+    energy_trace:
+        Mean energy recorded at each logged descent step, ``[(step, energy), …]``.
+    steps:
+        Number of gradient steps actually taken.
+    """
+
+    beliefs: Tensor
+    energy_trace: List[Tuple[int, float]]
+    steps: int
+
+
+@torch.enable_grad()
+def repair_beliefs(
+    ebm: EnergyBasedModel,
+    beliefs: Tensor,
+    fixed_mask: Tensor,
+    steps: int = 80,
+    lr: float = 0.2,
+    parsimony_weight: float = 0.1,
+    parsimony_mask: Tensor | None = None,
+    log_every: int = 10,
+) -> RepairResult:
+    """Test-time logical inference by gradient descent on the energy landscape.
+
+    This is the EBM's *native* (iterative) inference, as opposed to the Neural
+    Proposer's single amortized feed-forward pass. Given an initial belief state
+    — typically the proposer's output on a novel input — the free atoms are
+    optimized to minimize ``energy + parsimony_weight · mean(free beliefs)`` while
+    the ``fixed`` atoms (e.g. confidently-recovered cause atoms) are held
+    constant. Optimization runs in logit space so beliefs stay in ``(0, 1)``.
+
+    Because minimizing energy enforces every rule, this *repairs* a logically
+    inconsistent proposal toward the nearest valid state without any labels.
+
+    Parameters
+    ----------
+    ebm:
+        Trained (or untrained) energy-based model providing the engine + energy.
+    beliefs:
+        ``(batch, num_atoms)`` initial belief state to repair.
+    fixed_mask:
+        ``(num_atoms,)`` mask with ``1`` for atoms to hold constant, ``0`` for
+        atoms to optimize.
+    steps:
+        Number of gradient-descent steps.
+    lr:
+        Learning rate of the internal Adam optimizer.
+    parsimony_weight:
+        Weight of the Occam pressure on free atoms (selects the minimal model).
+    parsimony_mask:
+        ``(num_atoms,)`` mask selecting which atoms the parsimony term applies to;
+        defaults to the free atoms (``1 - fixed_mask``).
+    log_every:
+        Record the mean energy every ``log_every`` steps (and at the end).
+
+    Returns
+    -------
+    RepairResult
+        The repaired beliefs and the recorded energy trajectory.
+    """
+    if beliefs.dim() != 2:
+        raise ValueError("beliefs must have shape (batch, num_atoms)")
+    if fixed_mask.shape[-1] != beliefs.shape[1]:
+        raise ValueError("fixed_mask must have length num_atoms")
+    if steps <= 0:
+        raise ValueError("steps must be positive")
+
+    device = beliefs.device
+    fixed = fixed_mask.to(device=device, dtype=beliefs.dtype).view(1, -1)
+    free = 1.0 - fixed
+    if parsimony_mask is None:
+        par = free
+    else:
+        par = parsimony_mask.to(device=device, dtype=beliefs.dtype).view(1, -1)
+
+    base = beliefs.detach().clamp(1e-4, 1.0 - 1e-4)
+    logit = torch.logit(base).clone().requires_grad_(True)
+    optimizer = torch.optim.Adam([logit], lr=lr)
+
+    def current() -> Tensor:
+        return base * fixed + torch.sigmoid(logit) * free
+
+    trace: List[Tuple[int, float]] = []
+    for step in range(steps):
+        optimizer.zero_grad()
+        state = current()
+        energy = ebm.energy_from_satisfaction(ebm.engine.satisfaction(state)).mean()
+        # Mean belief over the parsimony-masked atoms, averaged over the batch.
+        denom = (par.sum() * state.shape[0]).clamp(min=1.0)
+        parsimony = (state * par).sum() / denom
+        (energy + parsimony_weight * parsimony).backward()
+        optimizer.step()
+        if step % log_every == 0:
+            trace.append((step, float(energy.detach())))
+
+    with torch.no_grad():
+        final = current()
+        final_energy = float(
+            ebm.energy_from_satisfaction(ebm.engine.satisfaction(final)).mean()
+        )
+    trace.append((steps, final_energy))
+    return RepairResult(beliefs=final.detach(), energy_trace=trace, steps=steps)
