@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ThermoLogic — Reasoning Console</title>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #121723; --panel-2: #0e131d; --line: #223047;
+    --ink: #e8eef7; --muted: #8ea0ba; --faint: #5f7292;
+    --cold: #2bb673; --cold-glow: #3ddc97; --warm: #ff8c42; --hot: #ff3b30;
+    --cyan: #4cc9f0; --cyan-dim: #2a7fa0;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #eef2f8; --panel: #ffffff; --panel-2: #f4f7fb; --line: #d3ddec;
+      --ink: #101726; --muted: #4a5c78; --faint: #7c8ca6;
+      --cold: #17a35f; --cold-glow: #12b06a; --cyan: #1284b8; --cyan-dim: #6fb8d8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0e14; --panel: #121723; --panel-2: #0e131d; --line: #223047;
+    --ink: #e8eef7; --muted: #8ea0ba; --faint: #5f7292; --cyan: #4cc9f0; --cyan-dim:#2a7fa0;
+    --cold:#2bb673; --cold-glow:#3ddc97;
+  }
+  :root[data-theme="light"] {
+    --bg: #eef2f8; --panel: #ffffff; --panel-2: #f4f7fb; --line: #d3ddec;
+    --ink: #101726; --muted: #4a5c78; --faint: #7c8ca6;
+    --cold: #17a35f; --cold-glow:#12b06a; --cyan: #1284b8; --cyan-dim:#6fb8d8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 80% -10%, rgba(76,201,240,0.06), transparent 60%), var(--bg);
+    color: var(--ink); font-family: var(--sans);
+    -webkit-font-smoothing: antialiased; line-height: 1.55;
+    padding: clamp(16px, 3vw, 40px);
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  header.masthead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .glyph { width: 42px; height: 42px; flex: none; }
+  h1 { font-family: var(--mono); font-size: clamp(20px, 2.6vw, 27px); font-weight: 700; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+  .tagline { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+  .byline { font-family: var(--mono); font-size: 12px; color: var(--faint); text-align: right; }
+  .byline a { color: var(--cyan); text-decoration: none; }
+  .byline a:hover { text-decoration: underline; }
+
+  .lead { color: var(--muted); font-size: 15px; max-width: 68ch; margin: 22px 0 26px; }
+  .lead b { color: var(--ink); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; }
+  .panel h2 { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); margin: 0 0 4px; }
+  .panel .desc { color: var(--muted); font-size: 13px; margin: 0 0 18px; min-height: 34px; }
+
+  /* thermal energy gauge */
+  .gauge { margin: 6px 0 16px; }
+  .gauge-track { position: relative; height: 16px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+  .gauge-fill { position: absolute; inset: 0; width: 0%; border-radius: 999px; transition: width .25s ease, background .25s ease; }
+  .gauge-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px; }
+  .gauge-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .readout { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; }
+  .status { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .08em; padding: 3px 9px; border-radius: 6px; }
+  .status.ok { color: #04150d; background: var(--cold-glow); }
+  .status.bad { color: #1a0402; background: var(--hot); }
+
+  /* toggles */
+  .toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .tog { font-family: var(--mono); font-size: 12px; padding: 7px 11px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer; transition: all .15s ease; user-select: none; }
+  .tog:hover { border-color: var(--cyan-dim); color: var(--ink); }
+  .tog[aria-pressed="true"] { background: rgba(76,201,240,0.14); border-color: var(--cyan); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(76,201,240,0.25); }
+  .tog.plan[aria-pressed="true"] { background: rgba(43,182,115,0.16); border-color: var(--cold); box-shadow: inset 0 0 0 1px rgba(43,182,115,0.3); }
+  .grouplabel { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 14px 0 7px; }
+
+  .violations { min-height: 26px; display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
+  .chip { font-family: var(--mono); font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(255,59,48,0.14); color: var(--hot); border: 1px solid rgba(255,59,48,0.3); }
+  :root[data-theme="light"] .chip, @media (prefers-color-scheme: light) { }
+
+  .btn { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .04em; padding: 11px 18px; border-radius: 8px; border: 1px solid var(--cyan); background: rgba(76,201,240,0.12); color: var(--cyan); cursor: pointer; transition: all .15s ease; }
+  .btn:hover:not(:disabled) { background: var(--cyan); color: #05121a; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn:focus-visible, .tog:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  .note { font-size: 12px; color: var(--faint); }
+
+  /* wave chart */
+  .wave-canvas-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); padding: 12px; overflow-x: auto; }
+  canvas { display: block; width: 100%; height: auto; }
+  .controls { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 14px; }
+  .controls label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  input[type="range"] { width: 100%; accent-color: var(--cyan); }
+  select { font-family: var(--mono); font-size: 12px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .stat-row { display: flex; gap: 22px; margin-top: 14px; flex-wrap: wrap; }
+  .stat { }
+  .stat .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .stat .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 700; }
+
+  footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+  footer a { color: var(--cyan); text-decoration: none; }
+  .theme-btn { font-family: var(--mono); font-size: 11px; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#2bb673"/><stop offset="0.55" stop-color="#ff8c42"/><stop offset="1" stop-color="#ff3b30"/>
+        </linearGradient></defs>
+        <path d="M6 40 C 16 40, 16 10, 24 10 S 32 40, 42 40" stroke="url(#g)" stroke-width="3.2" stroke-linecap="round"/>
+        <circle cx="24" cy="10" r="3.4" fill="#4cc9f0"/>
+        <circle cx="6" cy="40" r="2.6" fill="#2bb673"/>
+      </svg>
+      <div>
+        <h1>ThermoLogic</h1>
+        <div class="tagline">Reasoning as thermodynamics — an interactive console</div>
+      </div>
+    </div>
+    <div class="byline">
+      Teo Qing Cong Eugene<br /><a href="https://www.linkedin.com/in/eugene-teo" target="_blank" rel="noopener">linkedin.com/in/eugene-teo</a>
+      <div style="margin-top:8px"><button class="theme-btn" id="themeBtn" type="button">◐ theme</button></div>
+    </div>
+  </header>
+
+  <p class="lead">
+    A neural network's outputs can be constrained by hard logical rules through an <b>energy</b> function:
+    valid states sit at <b>low energy</b>, contradictions cost <b>exponentially</b> more. Below, two live
+    instruments. Left: score &amp; <b>repair</b> a structured configuration against business rules.
+    Right: watch a proof <b>propagate one step at a time</b> as you spend more test-time compute.
+  </p>
+
+  <div class="grid">
+    <!-- ============ CONSTRAINT CONSOLE ============ -->
+    <section class="panel" aria-labelledby="p1">
+      <h2 id="p1">Constraint Console · the product</h2>
+      <p class="desc" id="cfgDesc">Toggle a SaaS plan and features. The energy gauge scores validity live. Hit&nbsp;Repair to roll the config downhill to the nearest valid state.</p>
+
+      <div class="gauge">
+        <div class="gauge-row">
+          <span class="gauge-label">logical energy</span>
+          <span><span class="readout" id="cfgEnergy">0.00</span> <span class="status ok" id="cfgStatus">VALID</span></span>
+        </div>
+        <div class="gauge-track"><div class="gauge-fill" id="cfgFill"></div></div>
+      </div>
+
+      <div class="grouplabel">Plan tier (pick one)</div>
+      <div class="toggles" id="planToggles"></div>
+      <div class="grouplabel">Features requested</div>
+      <div class="toggles" id="featToggles"></div>
+
+      <div class="violations" id="cfgViolations" aria-live="polite"></div>
+
+      <div class="actions">
+        <button class="btn" id="repairBtn" type="button">▶ Repair to valid</button>
+        <span class="note" id="repairNote">no repair needed</span>
+      </div>
+    </section>
+
+    <!-- ============ REASONING WAVE ============ -->
+    <section class="panel" aria-labelledby="p2">
+      <h2 id="p2">Reasoning Wave · the finding</h2>
+      <p class="desc">A proof chain A₀→A₁→…→A₁₂. Truth propagates <b>one hop per few steps</b> of energy descent — deeper reasoning literally costs more test-time compute. The t-norm sets the speed.</p>
+
+      <div class="wave-canvas-wrap"><canvas id="waveCanvas" width="900" height="330"></canvas></div>
+
+      <div class="controls">
+        <label for="stepSlider">compute</label>
+        <input type="range" id="stepSlider" min="0" max="160" value="0" />
+        <span class="stat"><span class="v" id="stepVal" style="color:var(--cyan)">0</span> <span class="k" style="display:inline">steps</span></span>
+      </div>
+      <div class="controls" style="grid-template-columns:auto 1fr; margin-top:10px">
+        <label for="tnormSel">t-norm</label>
+        <select id="tnormSel">
+          <option value="lukasiewicz">Łukasiewicz — 3.4 steps/hop</option>
+          <option value="godel">Gödel — 1.0 steps/hop</option>
+          <option value="product">Product — 1.0 steps/hop</option>
+        </select>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="k">chain energy</div><div class="v" id="waveEnergy">—</div></div>
+        <div class="stat"><div class="k">atoms proven</div><div class="v" id="waveProven">0 / 12</div></div>
+        <div class="stat"><div class="k">deepest reached</div><div class="v" id="waveDepth">0</div></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span>Runs entirely in your browser — the same fuzzy-logic energy &amp; gradient-descent repair as the PyTorch <code>thermologic</code> library.</span>
+    <span>Project ThermoLogic · proof-of-concept</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ---------- fuzzy-logic energy engine (mirrors thermologic) ---------- */
+const TNORMS = {
+  lukasiewicz: { conj:(a,b)=>Math.max(0,a+b-1), resid:(a,c)=>Math.min(1,1-a+c) },
+  product:     { conj:(a,b)=>a*b,               resid:(a,c)=>a<=c?1:c/Math.max(a,1e-9) },
+  godel:       { conj:(a,b)=>Math.min(a,b),     resid:(a,c)=>a<=c?1:c },
+};
+const BETA = 4.0;
+const sig = x => 1/(1+Math.exp(-x));
+const logit = p => Math.log(Math.min(Math.max(p,1e-4),1-1e-4)/(1-Math.min(Math.max(p,1e-4),1-1e-4)));
+
+function litTruth(p, lit){ return lit.neg ? 1-p[lit.atom] : p[lit.atom]; }
+function ruleSat(p, rule, T){
+  let a = rule.ante.length ? litTruth(p, rule.ante[0]) : 1;
+  for(let i=1;i<rule.ante.length;i++) a = T.conj(a, litTruth(p, rule.ante[i]));
+  return T.resid(a, litTruth(p, rule.cons));
+}
+function energy(p, rules, T){
+  let s=0; for(const r of rules) s += Math.expm1(BETA*(1-ruleSat(p,r,T)));
+  return s/rules.length;
+}
+function perRuleViolations(p, rules, T){
+  return rules.filter(r=>ruleSat(p,r,T) < 0.5).map(r=>r.name);
+}
+/* numerical-gradient descent on energy in logit space, holding fixed atoms */
+function repairSteps(p0, rules, T, fixed, steps, lr){
+  // Soften free atoms away from saturation so logit-space gradients don't vanish
+  // (crisp 0/1 inputs would otherwise sit at ±∞ logits with zero gradient).
+  const n=p0.length;
+  const lg=p0.map((v,i)=> fixed[i] ? logit(v) : logit(Math.min(0.9, Math.max(0.1, v))));
+  const traj=[];
+  const P=()=>lg.map((z,i)=>fixed[i]?p0[i]:sig(z));
+  const eps=1e-3;
+  for(let s=0;s<steps;s++){
+    const cur=P();
+    for(let i=0;i<n;i++){
+      if(fixed[i]) continue;
+      const up=cur.slice(), dn=cur.slice();
+      up[i]=sig(lg[i]+eps); dn[i]=sig(lg[i]-eps);
+      const g=(energy(up,rules,T)-energy(dn,rules,T))/(2*eps);
+      lg[i]-=lr*g;
+    }
+    traj.push(P());
+  }
+  return traj;
+}
+
+/* ================= PANEL A — config console ================= */
+const ATOMS = ["plan_free","plan_pro","plan_enterprise","sso","audit_logs","priority_support","custom_domain","seats_gt_5","white_label"];
+const PLANS = ["plan_free","plan_pro","plan_enterprise"];
+const LABEL = {plan_free:"Free",plan_pro:"Pro",plan_enterprise:"Enterprise",sso:"SSO",audit_logs:"Audit logs",priority_support:"Priority support",custom_domain:"Custom domain",seats_gt_5:"Seats > 5",white_label:"White-label"};
+const idx = a => ATOMS.indexOf(a);
+const L=(a,neg=false)=>({atom:idx(a),neg});
+const CRULES = [
+  {ante:[L("plan_free")],cons:L("plan_pro",true),name:"free⇒¬pro"},
+  {ante:[L("plan_free")],cons:L("plan_enterprise",true),name:"free⇒¬enterprise"},
+  {ante:[L("plan_pro")],cons:L("plan_enterprise",true),name:"pro⇒¬enterprise"},
+  {ante:[L("sso")],cons:L("plan_enterprise"),name:"sso⇒enterprise"},
+  {ante:[L("white_label")],cons:L("plan_enterprise"),name:"white_label⇒enterprise"},
+  {ante:[L("audit_logs")],cons:L("plan_free",true),name:"audit_logs⇒¬free"},
+  {ante:[L("priority_support")],cons:L("plan_free",true),name:"support⇒¬free"},
+  {ante:[L("custom_domain")],cons:L("plan_free",true),name:"custom_domain⇒¬free"},
+  {ante:[L("seats_gt_5")],cons:L("plan_free",true),name:"seats>5⇒¬free"},
+];
+let cfg = ATOMS.map(()=>0);
+cfg[idx("plan_pro")]=1; cfg[idx("sso")]=1; cfg[idx("audit_logs")]=1; cfg[idx("seats_gt_5")]=1;
+
+const planWrap=document.getElementById("planToggles"), featWrap=document.getElementById("featToggles");
+function makeTog(atom,isPlan){
+  const b=document.createElement("button");
+  b.className="tog"+(isPlan?" plan":""); b.type="button"; b.textContent=LABEL[atom];
+  b.setAttribute("aria-pressed", cfg[idx(atom)]?"true":"false");
+  b.onclick=()=>{
+    if(isPlan){ PLANS.forEach(p=>cfg[idx(p)]=0); cfg[idx(atom)]=1; }
+    else cfg[idx(atom)] = cfg[idx(atom)]?0:1;
+    syncToggles(); renderCfg();
+  };
+  b.dataset.atom=atom; return b;
+}
+PLANS.forEach(a=>planWrap.appendChild(makeTog(a,true)));
+ATOMS.filter(a=>!PLANS.includes(a)).forEach(a=>featWrap.appendChild(makeTog(a,false)));
+function syncToggles(){ document.querySelectorAll(".tog").forEach(b=>b.setAttribute("aria-pressed", cfg[idx(b.dataset.atom)]?"true":"false")); }
+
+const heatColor = e => { // 0 (cold/green) -> high (hot/red)
+  const t=Math.min(1, e/6);
+  const stops=[[43,182,115],[255,140,66],[255,59,48]];
+  const seg=t<0.5?[stops[0],stops[1],t*2]:[stops[1],stops[2],(t-0.5)*2];
+  const [c1,c2,f]=seg; const m=(i)=>Math.round(c1[i]+(c2[i]-c1[i])*f);
+  return `rgb(${m(0)},${m(1)},${m(2)})`;
+};
+function renderCfg(){
+  const T=TNORMS.lukasiewicz;
+  const p=cfg.map(v=>v);
+  const e=energy(p,CRULES,T);
+  const viol=perRuleViolations(p,CRULES,T);
+  document.getElementById("cfgEnergy").textContent=e.toFixed(2);
+  const fill=document.getElementById("cfgFill");
+  fill.style.width=Math.min(100, 6+e/6*94)+"%"; fill.style.background=heatColor(e);
+  const st=document.getElementById("cfgStatus");
+  const ok=e<1e-3;
+  st.textContent=ok?"VALID":"INVALID"; st.className="status "+(ok?"ok":"bad");
+  const vc=document.getElementById("cfgViolations"); vc.innerHTML="";
+  viol.forEach(v=>{const c=document.createElement("span");c.className="chip";c.textContent=v;vc.appendChild(c);});
+  document.getElementById("repairBtn").disabled=ok;
+  document.getElementById("repairNote").textContent=ok?"already valid — nothing to repair":viol.length+" rule"+(viol.length>1?"s":"")+" broken";
+}
+document.getElementById("repairBtn").onclick=()=>{
+  const T=TNORMS.lukasiewicz;
+  const fixed=ATOMS.map((a)=>PLANS.includes(a)?1:0); // hold chosen plan tier
+  const traj=repairSteps(cfg.map(v=>v),CRULES,T,fixed,150,0.35);
+  const before=cfg.slice();
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finish=()=>{
+    cfg=traj[traj.length-1].map(v=>v>0.5?1:0);
+    document.querySelectorAll(".tog").forEach(b=>b.style.opacity="");
+    syncToggles(); renderCfg();
+    const changed=ATOMS.filter(a=>before[idx(a)]!==cfg[idx(a)]).map(a=>LABEL[a]);
+    document.getElementById("repairNote").textContent=changed.length?("repaired — removed: "+changed.join(", ")):"repaired";
+  };
+  if(reduced){ finish(); return; }
+  let i=0;
+  const timer=setInterval(()=>{
+    if(i>=traj.length){ clearInterval(timer); finish(); return; }
+    const p=traj[i];
+    const e=energy(p,CRULES,T);
+    document.getElementById("cfgEnergy").textContent=e.toFixed(2);
+    const fill=document.getElementById("cfgFill"); fill.style.width=Math.min(100,6+e/6*94)+"%"; fill.style.background=heatColor(e);
+    document.querySelectorAll(".tog").forEach(b=>{const v=p[idx(b.dataset.atom)];b.style.opacity=0.5+0.5*(b.getAttribute("aria-pressed")==="true"?v:1-v);});
+    i+=4;
+  }, 16);
+};
+
+/* ================= PANEL B — reasoning wave ================= */
+const K=12;
+function chainRules(){ const r=[]; for(let i=1;i<=K;i++) r.push({ante:[{atom:i-1,neg:false}],cons:{atom:i,neg:false},name:"r"+i}); return r; }
+const CR=chainRules();
+let trajCache={};
+function computeTraj(tn){
+  if(trajCache[tn]) return trajCache[tn];
+  const T=TNORMS[tn];
+  const p0=new Array(K+1).fill(0.02); p0[0]=1;
+  const fixed=new Array(K+1).fill(0); fixed[0]=1;
+  const lr = tn==="lukasiewicz"?9:9;
+  const traj=repairSteps(p0,CR,T,fixed,161,lr);
+  traj.unshift(p0.slice());
+  trajCache[tn]=traj; return traj;
+}
+const canvas=document.getElementById("waveCanvas"), ctx=canvas.getContext("2d");
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function drawWave(step){
+  const tn=document.getElementById("tnormSel").value;
+  const traj=computeTraj(tn);
+  const s=Math.min(step, traj.length-1);
+  const p=traj[s];
+  const W=canvas.width, H=canvas.height, padL=42, padB=26, padT=14, padR=14;
+  ctx.clearRect(0,0,W,H);
+  const bw=(W-padL-padR)/K, gh=H-padB-padT;
+  // axis labels
+  ctx.fillStyle=css("--faint"); ctx.font="11px ui-monospace, monospace"; ctx.textAlign="center";
+  for(let d=1;d<=K;d+=(K>10?2:1)){ ctx.fillText("A"+d, padL+bw*(d-0.5), H-8); }
+  ctx.save(); ctx.translate(12,padT+gh/2); ctx.rotate(-Math.PI/2); ctx.fillText("belief p(true)",0,0); ctx.restore();
+  let proven=0, deepest=0;
+  for(let d=1;d<=K;d++){
+    const v=p[d]; if(v>0.5){proven++; deepest=d;}
+    const h=gh*v, x=padL+bw*(d-1)+3, y=padT+gh-h;
+    // thermal fill: cold(green) when true(low local energy), warm when unresolved
+    const g=ctx.createLinearGradient(0,padT+gh,0,padT);
+    const col = v>0.5 ? [43,182,115] : [90,110,140];
+    g.addColorStop(0,`rgba(${col[0]},${col[1]},${col[2]},0.35)`);
+    g.addColorStop(1,`rgba(${col[0]},${col[1]},${col[2]},0.95)`);
+    ctx.fillStyle=g; ctx.fillRect(x,y,bw-6,h);
+    ctx.strokeStyle=css("--line"); ctx.strokeRect(x,padT,bw-6,gh);
+  }
+  // activation front line
+  ctx.strokeStyle=css("--cyan"); ctx.lineWidth=2; ctx.beginPath();
+  ctx.moveTo(padL+bw*deepest, padT+gh*0.02); ctx.lineTo(padL+bw*deepest, padT+gh);
+  ctx.stroke(); ctx.lineWidth=1;
+  const T=TNORMS[tn]; const e=energy(p,CR,T);
+  document.getElementById("waveEnergy").textContent=e.toFixed(3);
+  document.getElementById("waveEnergy").style.color=heatColor(e*6);
+  document.getElementById("waveProven").textContent=proven+" / "+K;
+  document.getElementById("waveDepth").textContent=deepest;
+  document.getElementById("stepVal").textContent=s;
+}
+const slider=document.getElementById("stepSlider");
+slider.oninput=()=>drawWave(+slider.value);
+document.getElementById("tnormSel").onchange=()=>{drawWave(+slider.value);};
+
+/* ---- auto-play the wave once on load to show the effect ---- */
+function autoplay(){
+  let v=0; slider.value=0;
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduced){ slider.value=120; drawWave(120); return; }
+  const tick=()=>{ v+=2; slider.value=Math.min(120,v); drawWave(+slider.value); if(v<120) setTimeout(tick,28); };
+  tick();
+}
+
+/* ---------- theme toggle ---------- */
+document.getElementById("themeBtn").onclick=()=>{
+  const cur=document.documentElement.getAttribute("data-theme")
+    || (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  const next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  drawWave(+slider.value); renderCfg();
+};
+
+/* ---------- init ---------- */
+function resizeCanvas(){ const w=canvas.parentElement.clientWidth-24; canvas.width=Math.max(560,w); canvas.height=Math.round(canvas.width*0.37); drawWave(+slider.value); }
+window.addEventListener("resize",resizeCanvas);
+renderCfg(); resizeCanvas(); autoplay();
+</script>
+</body>
+</html>

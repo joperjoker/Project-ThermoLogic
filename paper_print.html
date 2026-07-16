@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ThermoLogic — Technical Report</title>
+<style>
+  @page { size: A4; margin: 19mm 18mm; }
+  * { box-sizing: border-box; }
+  html { font-size: 10.5pt; }
+  body {
+    font-family: Georgia, "Times New Roman", serif; color: #14171c; line-height: 1.48;
+    margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .title-block { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #14171c; padding-bottom: 16px; }
+  h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 10px; letter-spacing: -0.01em; }
+  .authors { font-size: 12pt; margin: 6px 0 2px; }
+  .affil { font-size: 9.5pt; color: #3a4250; }
+  .affil a { color: #0b62b6; text-decoration: none; }
+  .meta { font-size: 9pt; color: #5a6472; margin-top: 6px; font-family: "SF Mono", ui-monospace, monospace; }
+  .scope { font-size: 8.8pt; background: #f3f5f8; border: 1px solid #dde3ec; border-radius: 5px;
+           padding: 8px 11px; margin: 14px 0 18px; color: #38414f; }
+  h2 { font-size: 12.5pt; margin: 20px 0 7px; border-bottom: 1px solid #cdd4de; padding-bottom: 3px; }
+  h3 { font-size: 10.8pt; margin: 14px 0 5px; }
+  p { margin: 0 0 8px; text-align: justify; }
+  .abstract { font-size: 9.8pt; margin: 0 22px 6px; }
+  .abstract .lbl, .kw .lbl { font-weight: bold; }
+  .kw { font-size: 9.2pt; margin: 0 22px 8px; color: #3a4250; }
+  code, .mono { font-family: "SF Mono", ui-monospace, "Cascadia Code", monospace; font-size: 9pt;
+                background: #f1f3f7; padding: 0.5px 3px; border-radius: 3px; }
+  figure { margin: 12px 0; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; border: 1px solid #e2e7ee; border-radius: 4px; }
+  figcaption { font-size: 8.6pt; color: #4a5361; margin-top: 5px; font-style: italic; text-align: left; }
+  table { border-collapse: collapse; width: 100%; font-size: 8.7pt; margin: 8px 0 12px;
+          font-family: "SF Mono", ui-monospace, monospace; page-break-inside: avoid; }
+  caption { caption-side: top; text-align: left; font-family: Georgia, serif; font-size: 9pt;
+            font-style: italic; color: #4a5361; margin-bottom: 4px; }
+  th, td { border: 1px solid #d3d9e2; padding: 4px 7px; text-align: left; }
+  th { background: #eef1f6; font-weight: bold; }
+  td:not(:first-child), th:not(:first-child) { font-variant-numeric: tabular-nums; }
+  .cols { column-count: 1; }
+  ol, ul { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin-bottom: 3px; text-align: justify; }
+  .refs { font-size: 8.5pt; color: #2c3440; }
+  .refs p { margin-bottom: 4px; }
+  a { color: #0b62b6; }
+  hr { border: none; border-top: 1px solid #cdd4de; margin: 16px 0; }
+</style>
+</head>
+<body>
+  <div class="title-block">
+    <h1>Logical Energy as Test-Time Compute:<br />Scoring and Repairing Neural Outputs with a Differentiable<br />Theorem-Proving Energy-Based Model</h1>
+    <div class="authors">Teo Qing Cong Eugene</div>
+    <div class="affil"><a href="https://www.linkedin.com/in/eugene-teo">linkedin.com/in/eugene-teo</a></div>
+    <div class="meta">Technical Report · Project ThermoLogic · Reproducible PyTorch prototype</div>
+  </div>
+
+  <div class="scope"><b>Scope &amp; honesty note.</b> This is an engineering technical report / proof-of-concept,
+  not a peer-reviewed claim of a new paradigm. It builds directly on established neuro-symbolic work
+  (Logic Tensor Networks, DeepProbLog, Semantic Loss, Neural Theorem Provers, and analyses of differentiable
+  fuzzy operators). Every number is produced by the accompanying open code with fixed seeds. The contribution
+  is (i) a clean, fully-reproducible implementation, and (ii) two small original observations about
+  <i>test-time energy repair</i> and how <i>reasoning depth maps to test-time compute</i>.</div>
+
+  <p class="abstract"><span class="lbl">Abstract.</span> Neural models trained by maximum likelihood have no
+  internal mechanism forbidding logically inconsistent outputs. We present <b>Project ThermoLogic</b>, a compact
+  PyTorch system that fuses Differentiable Theorem Proving (relaxing discrete rules into fuzzy-logic t-norms)
+  with an Energy-Based Model: a belief state's energy is ~0 when it satisfies every rule and grows exponentially
+  as rules are violated. A small MLP proposes probabilistic truth values; the energy acts as a differentiable
+  prover. On an 11-atom benchmark with a genuine world-level train/test split we report three findings.
+  (1) A plain supervised network matches ThermoLogic on raw accuracy (0.955 vs 0.970) but its outputs are
+  logically inconsistent (mean energy 0.95); the energy layer's value is a <b>label-free consistency guarantee</b>
+  (energy 0.001), not accuracy. (2) <b>Test-time energy repair</b> — gradient descent on the energy — turns an
+  inconsistent output on unseen inputs into a valid one (0.935&#8594;0.971 accuracy; energy 0.90&#8594;0.0006).
+  (3) In a proof chain, truth propagates <b>one hop at a time</b>: inference cost grows linearly with reasoning
+  depth, and the t-norm sets the propagation speed (~3.4 descent steps/hop for &#321;ukasiewicz vs ~1.0 for
+  G&ouml;del/Product). The mechanism ships as a small library that scores and repairs any model's structured
+  output against hard rules at a controllable compute budget.</p>
+  <p class="kw"><span class="lbl">Keywords:</span> neuro-symbolic AI, energy-based models, differentiable logic,
+  t-norms, test-time compute, constraint satisfaction, guardrails, PyTorch.</p>
+
+  <h2>1. Introduction</h2>
+  <p>A maximum-likelihood objective rewards fitting the data distribution; it never assigns infinite cost to a
+  self-contradictory output. Symbolic systems are the opposite — rigorously consistent but non-differentiable.
+  Project ThermoLogic asks a narrow, testable question: <i>can a neural network's continuous, probabilistic
+  beliefs be constrained — and repaired — by discrete logical rules, using only backpropagation?</i> The
+  organizing metaphor is thermodynamic: logical validity corresponds to low energy (a ground state), a
+  contradiction to high energy. Because the energy is differentiable, it can be minimized at training time (as a
+  loss) and at test time (as an inference procedure that repairs a given output).</p>
+  <p><b>Contributions.</b> (1) A clean, reproducible DTP + EBM implementation with three t-norm families and
+  residuated implications. (2) A label-free consistency signal + repair operator, and the finding that a plain
+  supervised net matches on accuracy but not consistency — so the value is reliability, not accuracy (&sect;5.3).
+  (3) Test-time energy repair framed as inference-time compute, with a measured compute&#8211;consistency curve
+  (&sect;5.2). (4) The truth-propagation wave: reasoning depth &#8614; test-time compute is linear, and the t-norm
+  sets the speed (&sect;5.1). (5) A small product — <code>score()</code>/<code>repair()</code> — and a worked
+  config-validation use case.</p>
+
+  <h2>2. Method</h2>
+  <p>Let <code>p_i &#8712; [0,1]</code> be the belief that atom <code>i</code> is true. A literal's truth is
+  <code>p_i</code> (or <code>1&#8722;p_i</code> if negated). A Horn rule <code>L&#8321;&#8743;&#8230;&#8743;L_k &#8594; C</code>
+  scores as <code>sat = residuum(&#8855;&#7522; truth(L&#7522;), truth(C))</code>. Modus ponens is emergent: with the
+  antecedent believed, <code>residuum(1, p_C) = p_C</code>, so <code>sat&#8594;1</code> requires <code>p_C&#8594;1</code>.
+  Per-rule energy is <code>E_r = exp(&#946;(1&#8722;sat_r)) &#8722; 1</code>; total <code>E = mean_r E_r</code>. Valid
+  &#8658; <code>E=0</code>; contradictions grow exponentially with inverse temperature <code>&#946;</code>.</p>
+
+  <table>
+    <caption>Table 1 — Operator mapping per t-norm family.</caption>
+    <tr><th>Discrete</th><th>Product</th><th>&#321;ukasiewicz (default)</th><th>G&ouml;del</th></tr>
+    <tr><td>&#172;a</td><td>1&#8722;a</td><td>1&#8722;a</td><td>1&#8722;a</td></tr>
+    <tr><td>a &#8743; b</td><td>a&#183;b</td><td>max(0, a+b&#8722;1)</td><td>min(a,b)</td></tr>
+    <tr><td>a &#8658; c (residuum)</td><td>1 if a&#8804;c else c/a</td><td>min(1, 1&#8722;a+c)</td><td>1 if a&#8804;c else c</td></tr>
+  </table>
+
+  <p><b>Test-time repair (the key operator).</b> Given any belief state <code>p</code> (e.g. a model's output on a
+  novel input), hold trusted atoms fixed and run gradient descent on <code>E</code> over the rest, in logit space:
+  <code>p* = argmin E(p)</code>. Because minimizing <code>E</code> enforces every rule, this repairs an inconsistent
+  output to the nearest valid state; the number of steps is a compute budget.</p>
+
+  <h2>3. Benchmark</h2>
+  <p>The expanded knowledge base has 11 atoms and 9 rules, yielding 18 distinct logically-consistent worlds
+  (294 of 2048 full Boolean worlds are consistent). Five atoms are observed causes (Rain, Sprinkler, Cold,
+  HeaterOn, Windy); six are derived (Cloudy, WetGround, Slippery, Ice, Warm, Chilly) via rules including two-literal
+  antecedents (<code>Cold&#8743;WetGround&#8594;Ice</code>) and a two-hop chain
+  (<code>Rain&#8594;WetGround&#8594;Slippery</code>), plus negative constraints (<code>Rain&#8594;&#172;Sprinkler</code>).
+  We hold out entire worlds: train on 12, test on 6 never seen. Inputs are noisy encodings of the causes
+  (&#963;=0.12) with 3 distractor dimensions.</p>
+
+  <h2>4. Experiments</h2>
+
+  <h3>4.1 Logical energy as test-time compute (the propagation wave)</h3>
+  <p>Starting from a state where a cause is true but a chain of derived atoms is false, test-time energy descent
+  (plain SGD) turns atoms on one hop at a time — atom depth <code>d</code> activates only after <code>d&#8722;1</code>.
+  Activation step is a strictly monotone, near-linear function of depth; the t-norm sets the slope
+  (&#321;ukasiewicz 3.4 steps/hop; Product/G&ouml;del ~1.0). The clean monotone wave requires momentum-free SGD;
+  the robust claim is the within-chain wave and linear depth-cost at fixed length.</p>
+  <figure><img src="figures/fig_depth_wave.png" alt="depth wave" />
+    <figcaption>Figure 1. (a) Truth propagates as a wave — one hop at a time. (b) Inference cost grows linearly
+    with reasoning depth; the t-norm sets the propagation speed.</figcaption></figure>
+
+  <h3>4.2 Generalization and test-time repair</h3>
+  <p>On worlds never seen in training, a single feed-forward pass generalizes only partially and leaves outputs
+  logically inconsistent (high energy). Repair fixes them, and is a compute knob: more steps &#8594; lower energy
+  and higher accuracy, plateauing near 50 steps.</p>
+  <figure><img src="figures/fig_generalization.png" alt="generalization" />
+    <figcaption>Figure 2. Amortized inference leaves unseen states inconsistent; repair drives energy to zero
+    (mean &#177; std, 5 seeds).</figcaption></figure>
+  <table>
+    <caption>Table 2 — Generalization (mean &#177; std, 5 seeds).</caption>
+    <tr><th>Split</th><th>Derived accuracy</th><th>Mean energy</th></tr>
+    <tr><td>Seen worlds</td><td>0.995 &#177; 0.010</td><td>~0</td></tr>
+    <tr><td>Unseen (feed-forward)</td><td>0.935 &#177; 0.022</td><td>0.898 &#177; 0.178</td></tr>
+    <tr><td><b>Unseen (+ repair)</b></td><td><b>0.971 &#177; 0.007</b></td><td><b>0.001 &#177; 0.000</b></td></tr>
+    <tr><td>Cause recovery (unseen)</td><td>0.981 &#177; 0.004</td><td>—</td></tr>
+  </table>
+  <figure><img src="figures/fig_repair_curve.png" alt="repair curve" />
+    <figcaption>Figure 3. Test-time compute vs. energy and accuracy: spend more descent steps &#8594; lower energy,
+    higher accuracy.</figcaption></figure>
+
+  <h3>4.3 Baselines — the value is consistency, not accuracy</h3>
+  <p>A plain supervised network (BCE on all atoms, no logic) reaches 0.955 accuracy on unseen worlds — comparable
+  to ThermoLogic + repair (0.970). But its outputs are logically inconsistent (energy 0.946), with no signal that
+  anything is wrong. Only the energy provides a label-free consistency guarantee (0.001). <b>This is the honest
+  headline: ThermoLogic is a reliability mechanism, not a way to beat a classifier on accuracy.</b></p>
+  <figure><img src="figures/fig_baselines.png" alt="baselines" />
+    <figcaption>Figure 4. Comparable accuracy; only the energy guarantees consistency (mean &#177; std, 3 seeds).</figcaption></figure>
+  <table>
+    <caption>Table 3 — Baselines on unseen worlds (mean &#177; std, 3 seeds).</caption>
+    <tr><th>Method</th><th>Derived accuracy</th><th>Mean energy (consistency)</th></tr>
+    <tr><td>Supervised NN (no logic)</td><td>0.955 &#177; 0.010</td><td>0.946 &#177; 0.053 &#10007; inconsistent</td></tr>
+    <tr><td>ThermoLogic (feed-forward)</td><td>0.927 &#177; 0.026</td><td>0.90</td></tr>
+    <tr><td><b>ThermoLogic (+ repair)</b></td><td>0.970 &#177; 0.008</td><td><b>0.001 &#177; 0.000 &#10003;</b></td></tr>
+  </table>
+
+  <h3>4.4 Robustness and t-norm comparison</h3>
+  <p>Repair helps most when causes are recoverable (low&#8211;moderate noise); at high noise (&#963;&#8805;0.3)
+  mis-recovered causes cap accuracy. As more worlds are held out, generalization degrades gracefully. Among
+  t-norms, &#321;ukasiewicz's smoother gradients give the best accuracy and repairability (0.970 vs 0.876 Product,
+  0.878 G&ouml;del) — the default.</p>
+  <figure><img src="figures/fig_robustness.png" alt="robustness" />
+    <figcaption>Figure 5. Robustness to input noise (a) and holdout size (b); mean &#177; std, 3 seeds.</figcaption></figure>
+  <figure><img src="figures/fig_tnorm.png" alt="tnorm" />
+    <figcaption>Figure 6. t-norm comparison on the 11-atom KB.</figcaption></figure>
+  <figure><img src="figures/fig_energy_landscape.png" alt="energy landscape" />
+    <figcaption>Figure 7. Energy partitions all 2^11 = 2048 Boolean worlds into consistent (E=0) vs. contradictions
+    (294 consistent; the rest carry energy in [5.96, 41.69]).</figcaption></figure>
+
+  <h2>5. The product</h2>
+  <p>The mechanism ships as <code>thermologic</code>, a differentiable logic-energy layer that drops after any
+  model: <code>score()</code> gives a label-free inconsistency signal, <code>violations()</code> names the broken
+  rules, and <code>repair(budget=&#8230;)</code> returns the nearest valid output at a controllable compute budget.
+  A worked SaaS config-validation example flags an invalid plan (e.g. a Pro request for enterprise-only SSO), names
+  the rule, and repairs to the nearest valid configuration. v1 scope: structured/tabular outputs with propositional
+  rules; general LLM-text validation is roadmap, not a claim.</p>
+
+  <h2>6. Discussion &amp; limitations</h2>
+  <p>The honest value proposition is a label-free consistency guarantee and repair, not beating supervised learning
+  on accuracy. The energy adds an iterative, budgetable inference step — a small instance of test-time compute for
+  logical consistency. Limitations: 11 atoms, propositional Horn-style rules, synthetic data; no first-order
+  variables, no defeasible rules, no real LLM. Soft energy makes contradictions expensive, not impossible (a crisp
+  projection step would give a hard guarantee). The clean propagation wave needs momentum-free SGD, and mean-energy
+  normalization couples wave speed to chain length.</p>
+
+  <h2>7. Conclusion</h2>
+  <p>A differentiable fuzzy-logic energy lets a neural network's beliefs be scored and repaired against hard rules by
+  backpropagation alone. Empirically the value is reliability: comparable accuracy to a plain net but with a
+  label-free consistency guarantee, an inference-time repair that scales with a compute budget, and a clean picture
+  of reasoning depth as test-time compute — a small, honest, reproducible substrate for constraint-aware ML.</p>
+
+  <hr />
+  <h2>References</h2>
+  <div class="refs">
+    <p>Badreddine, Garcez, Serafini, Spranger. <i>Logic Tensor Networks.</i> Artificial Intelligence, 2022.</p>
+    <p>Manhaeve, Duman&#269;i&#263;, Kimmig, Demeester, De Raedt. <i>DeepProbLog.</i> NeurIPS, 2018.</p>
+    <p>Xu, Zhang, Friedman, Liang, Van den Broeck. <i>A Semantic Loss Function for Deep Learning with Symbolic Knowledge.</i> ICML, 2018.</p>
+    <p>Rockt&auml;schel, Riedel. <i>End-to-End Differentiable Proving.</i> NeurIPS, 2017.</p>
+    <p>van Krieken, Acar, van Harmelen. <i>Analyzing Differentiable Fuzzy Logic Operators.</i> Artificial Intelligence, 2022.</p>
+    <p>LeCun, Chopra, Hadsell, Ranzato, Huang. <i>A Tutorial on Energy-Based Learning.</i> 2006.</p>
+    <p>Evans, Grefenstette. <i>Learning Explanatory Rules from Noisy Data (&#8706;ILP).</i> JAIR, 2018.</p>
+    <p>Lu, West, Zellers, Le Bras, Bhagavatula, Choi. <i>NeuroLogic Decoding.</i> NAACL, 2021.</p>
+  </div>
+  <p style="font-size:8.2pt;color:#6a7480;margin-top:10px">References are indicative of the intellectual context;
+  this is a self-contained prototype, not a comparative benchmark against these systems. Code, figures, and this
+  report regenerate from the open repository with fixed seeds.</p>
+</body>
+</html>
