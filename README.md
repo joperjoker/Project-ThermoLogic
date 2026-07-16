@@ -1,60 +1,84 @@
 # Project ThermoLogic
 
-A lightweight, self-contained PyTorch prototype fusing **Differentiable Theorem
-Proving (DTP)** with an **Energy-Based Model (EBM)**. It demonstrates how a
-neural network's probabilistic outputs can be mathematically constrained by
-deterministic logical rules through an energy-minimization loss: *logically
-valid states have (near-)zero energy; contradictions cost exponentially much.*
+**A differentiable logic-energy layer for AI outputs.** Drop it after any model
+to *score* how much an output violates your hard rules (a label-free
+inconsistency signal) and *repair* it to the nearest valid state — at a compute
+budget you control.
 
-> Reasoning as thermodynamics — the network explores the latent space
-> probabilistically, but the internal "physics" (the EBM energy) drives every
-> belief state toward logical validity.
+> Reasoning as thermodynamics: logically valid outputs sit at **low energy**;
+> contradictions cost **exponentially** more. "Thinking" is letting an answer roll
+> downhill until it obeys the rules.
+
+By **Teo Qing Cong Eugene** · [linkedin.com/in/eugene-teo](https://www.linkedin.com/in/eugene-teo)
+· 📄 [Technical report](PAPER.md) · 📖 [Plain-English explainer](EXPLAINER.md)
+
+---
 
 ## Quick start
 
 ```bash
-./run.sh                 # installs deps (torch, numpy) and trains end-to-end
-./run.sh --epochs 60     # any train.py flag is forwarded
+pip install -e .                          # installs the thermologic package
 ```
 
-No dataset, no configuration, no manual steps — the synthetic logical dataset is
-generated natively from the rule base at runtime.
+```python
+import torch
+from thermologic import LogicEnergy, implies
 
-## What you'll see
+guard = LogicEnergy(
+    rules=[
+        implies(["sso"], "plan_enterprise", name="sso⇒enterprise"),
+        implies(["plan_free"], "seats_gt_5", negate_consequent=True, name="free⇒≤5 seats"),
+    ],
+    atom_names=["plan_free", "plan_enterprise", "sso", "seats_gt_5"],
+)
 
-Across training the mean **energy** falls to ~0, per-rule **satisfaction** rises
-to ~1, and accuracy on the **derived** atoms (never directly supervised —
-inferred purely through the energy) climbs from chance to ~96%. A final probe
-contrasts a valid world (`energy ≈ 0`) with a hand-built contradiction
-(`energy ≈ 43`), a ~10¹⁰× gap.
+out = torch.tensor([[1.0, 0.0, 1.0, 1.0]])   # free plan + SSO + >5 seats (invalid)
+guard.score(out)        # -> tensor([...])  label-free inconsistency signal (>0)
+guard.violations(out)   # -> [['sso⇒enterprise', 'free⇒≤5 seats']]
+guard.repair(out, budget=60)   # -> nearest rule-satisfying configuration
+```
 
-## The paper
+## What's inside
 
-[`PAPER.md`](PAPER.md) is the full technical report — abstract, method,
-labelled diagrams, charts, and results tables. Regenerate every figure and the
-`results/metrics.json` it cites with:
+| Result (see the paper) | Product feature |
+|---|---|
+| Energy = logical inconsistency (label-free) | `score()` — a hallucination/trust signal, no ground truth needed |
+| Test-time repair pulls outputs to validity | `repair()` — fix an output to the nearest valid state |
+| Reasoning depth = test-time compute | `budget=` — a "thinking" dial; deeper rules need more |
+
+**Headline numbers** (11-atom benchmark, unseen-world test, 5 seeds): a plain
+supervised net matches on accuracy (`0.955`) but its outputs are logically
+*inconsistent* (energy `0.95`); ThermoLogic + repair reaches `0.971` at energy
+`0.001` — the value is the **consistency guarantee**, not accuracy.
+
+## Run everything
 
 ```bash
-python experiments.py    # writes figures/*.png and results/metrics.json
+./run.sh                                 # autonomous training pipeline
+python experiments.py                    # regenerate all figures + results/metrics.json
+python examples/config_validator.py      # worked use case: SaaS config validator
+python -m unittest discover -s tests     # 18 unit tests
 ```
 
-Headline results: derived-atom accuracy **0.55 → 0.96** (no-logic ablation:
-**0.34**), mean energy → `4×10⁻⁴`, rule satisfaction `0.9999`, and a
-**>10¹⁰×** energy gap between valid and contradictory belief states.
+## Repository layout
 
-## Files
+| Path | Role |
+|---|---|
+| `thermologic/` | The library: `api.py` (`LogicEnergy`), `logic_engine.py` (DTP / t-norms), `model.py` (EBM, repair), `data.py` |
+| `examples/config_validator.py` | Worked use case — config validation via score/repair |
+| `experiments.py` | Reproducible experiment battery → `figures/`, `results/metrics.json` |
+| `train.py` · `run.sh` | Autonomous training pipeline |
+| `tests/` | Unit tests (t-norms, energy, repair, API) |
+| `PAPER.md` · `EXPLAINER.md` · `architecture_plan.md` | Technical report, plain-English version, design doc |
+| `figures/` · `results/` | Generated charts and metrics |
 
-| File                    | Role |
-|-------------------------|------|
-| `architecture_plan.md`  | Technical design: discrete-logic → differentiable-tensor mapping, component map. |
-| `PAPER.md`              | Full technical report with diagrams, charts, and results tables. |
-| `logic_engine.py`       | DTP module: fuzzy t-norms (Product / Łukasiewicz / Gödel), residuated implication, `KnowledgeBase`, per-rule satisfaction. |
-| `model.py`              | `NeuralProposer` (MLP), `EnergyBasedModel` (exponential energy), `ThermoLogicLoss`. |
-| `train.py`              | Autonomous pipeline: synthetic data, mini-batch SGD, metrics, energy probe. |
-| `experiments.py`        | Reproducible experiment battery → `figures/*.png` + `results/metrics.json`. |
-| `run.sh`                | One-command pipeline driver. |
-| `figures/`, `results/`  | Generated charts and machine-readable metrics for the paper. |
+## Scope
 
-## Requirements
+v1 targets **structured/tabular outputs with propositional rules** (config/form
+validation, tabular decisions, data-integrity repair). General LLM-text
+validation is roadmap, not a claim. This is an honest proof-of-concept and a small
+usable tool — see the [technical report](PAPER.md) for the full, caveated story.
 
-Python 3.9+, `torch`, `numpy` (installed automatically by `run.sh`).
+## License
+
+MIT.
