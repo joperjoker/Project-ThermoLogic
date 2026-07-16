@@ -28,15 +28,20 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, TensorDataset
 
-from data import Dataset, enumerate_worlds, sample_from_worlds, split_worlds
-from logic_engine import (
+from thermologic.data import Dataset, enumerate_worlds, sample_from_worlds, split_worlds
+from thermologic.logic_engine import (
     DifferentiableLogicEngine,
     ImplicationRule,
     KnowledgeBase,
     Literal,
     TNorm,
 )
-from model import EnergyBasedModel, NeuralProposer, ThermoLogicLoss, repair_beliefs
+from thermologic.model import (
+    EnergyBasedModel,
+    NeuralProposer,
+    ThermoLogicLoss,
+    repair_beliefs,
+)
 
 # ----- small "default" knowledge base (5 atoms) ----------------------------- #
 RAIN, CLOUDY, WET_GROUND, SPRINKLER, SLIPPERY = range(5)

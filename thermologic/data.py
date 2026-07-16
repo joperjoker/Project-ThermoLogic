@@ -17,7 +17,11 @@ from typing import List, Sequence, Tuple
 import torch
 from torch import Tensor
 
-from logic_engine import DifferentiableLogicEngine, KnowledgeBase, forward_chaining
+from thermologic.logic_engine import (
+    DifferentiableLogicEngine,
+    KnowledgeBase,
+    forward_chaining,
+)
 
 __all__ = ["Dataset", "WorldSplit", "enumerate_worlds", "split_worlds", "sample_from_worlds"]
 

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thermologic"
+version = "0.1.0"
+description = "A differentiable logic-energy layer for AI outputs: score logical inconsistency and repair outputs to satisfy hard rules at a controllable compute budget."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Teo Qing Cong Eugene" }]
+keywords = [
+    "neuro-symbolic", "energy-based-model", "differentiable-logic",
+    "fuzzy-logic", "t-norm", "constraint-satisfaction", "hallucination",
+    "pytorch", "guardrails",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = ["torch>=2.0"]
+
+[project.optional-dependencies]
+experiments = ["numpy", "matplotlib"]
+dev = ["pytest"]
+
+[project.urls]
+Author = "https://www.linkedin.com/in/eugene-teo"
+
+[tool.setuptools]
+packages = ["thermologic"]

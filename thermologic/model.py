@@ -26,7 +26,7 @@ from typing import List, Sequence, Tuple
 import torch
 from torch import Tensor, nn
 
-from logic_engine import DifferentiableLogicEngine, KnowledgeBase, TNorm
+from thermologic.logic_engine import DifferentiableLogicEngine, KnowledgeBase, TNorm
 
 __all__ = [
     "NeuralProposer",
@@ -338,6 +338,7 @@ def repair_beliefs(
     lr: float = 0.2,
     parsimony_weight: float = 0.1,
     parsimony_mask: Tensor | None = None,
+    optimizer: str = "adam",
     log_every: int = 10,
 ) -> RepairResult:
     """Test-time logical inference by gradient descent on the energy landscape.
@@ -364,12 +365,15 @@ def repair_beliefs(
     steps:
         Number of gradient-descent steps.
     lr:
-        Learning rate of the internal Adam optimizer.
+        Learning rate of the internal optimizer.
     parsimony_weight:
         Weight of the Occam pressure on free atoms (selects the minimal model).
     parsimony_mask:
         ``(num_atoms,)`` mask selecting which atoms the parsimony term applies to;
         defaults to the free atoms (``1 - fixed_mask``).
+    optimizer:
+        ``"adam"`` (default; robust for repairing a trained model's output) or
+        ``"sgd"`` (momentum-free; gives the cleanest hop-by-hop propagation wave).
     log_every:
         Record the mean energy every ``log_every`` steps (and at the end).
 
@@ -395,21 +399,27 @@ def repair_beliefs(
 
     base = beliefs.detach().clamp(1e-4, 1.0 - 1e-4)
     logit = torch.logit(base).clone().requires_grad_(True)
-    optimizer = torch.optim.Adam([logit], lr=lr)
+    opt_name = optimizer.lower()
+    if opt_name == "adam":
+        opt = torch.optim.Adam([logit], lr=lr)
+    elif opt_name == "sgd":
+        opt = torch.optim.SGD([logit], lr=lr)
+    else:
+        raise ValueError(f"optimizer must be 'adam' or 'sgd'; got {optimizer!r}")
 
     def current() -> Tensor:
         return base * fixed + torch.sigmoid(logit) * free
 
     trace: List[Tuple[int, float]] = []
     for step in range(steps):
-        optimizer.zero_grad()
+        opt.zero_grad()
         state = current()
         energy = ebm.energy_from_satisfaction(ebm.engine.satisfaction(state)).mean()
         # Mean belief over the parsimony-masked atoms, averaged over the batch.
         denom = (par.sum() * state.shape[0]).clamp(min=1.0)
         parsimony = (state * par).sum() / denom
         (energy + parsimony_weight * parsimony).backward()
-        optimizer.step()
+        opt.step()
         if step % log_every == 0:
             trace.append((step, float(energy.detach())))
 
