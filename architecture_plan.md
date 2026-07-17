@@ -1,5 +1,11 @@
 # Project ThermoLogic — Architecture Plan
 
+> **Historical design document.** This was the original pre-implementation plan
+> (5-atom knowledge base, training-time energy only). The project has since
+> grown: an 11-atom benchmark with world-level holdout, test-time energy
+> repair, the `thermologic` package, and the depth-as-compute finding. For the
+> current, authoritative description see [`PAPER.md`](PAPER.md).
+
 A local PyTorch prototype that fuses **Differentiable Theorem Proving (DTP)**
 with an **Energy-Based Model (EBM)**. The thesis: a neural network's
 probabilistic beliefs can be *mathematically constrained* by deterministic

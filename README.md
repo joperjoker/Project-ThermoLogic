@@ -1,5 +1,8 @@
 # Project ThermoLogic
 
+[![tests](https://github.com/joperjoker/Project-ThermoLogic/actions/workflows/ci.yml/badge.svg)](https://github.com/joperjoker/Project-ThermoLogic/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **A differentiable logic-energy layer for AI outputs.** Drop it after any model
 to *score* how much an output violates your hard rules (a label-free
 inconsistency signal) and *repair* it to the nearest valid state — at a compute
@@ -11,7 +14,9 @@ budget you control.
 
 By **Teo Qing Cong Eugene** · [linkedin.com/in/eugene-teo](https://www.linkedin.com/in/eugene-teo)
 
-📄 [Technical report](PAPER.md) · 📑 [PDF](ThermoLogic_TechnicalReport.pdf) · 📖 [Plain-English explainer](EXPLAINER.md) · 🕹️ [Interactive playground](index.html) · 🧭 [Walkthrough](WALKTHROUGH.md)
+📄 [Technical report](PAPER.md) · 📑 [PDF](ThermoLogic_TechnicalReport.pdf) · 📖 [Plain-English explainer](EXPLAINER.md) · 🕹️ [Live demo](https://joperjoker.github.io/Project-ThermoLogic/) · 🧭 [Walkthrough](WALKTHROUGH.md)
+
+[![ThermoLogic reasoning console](assets/playground_preview.png)](https://joperjoker.github.io/Project-ThermoLogic/)
 
 ---
 
