@@ -81,8 +81,9 @@ seeds). Key outputs:
 
 ## 5. The interactive playground
 
-Open `playground.html` in any browser (no server needed), or use the hosted
-version. Two live instruments:
+Open `index.html` in any browser (no server needed) — or visit the GitHub Pages
+site once enabled (Settings → Pages → deploy from branch, root folder):
+`https://<your-username>.github.io/Project-ThermoLogic/`. Two live instruments:
 
 - **Constraint Console** — toggle a plan + features, watch the energy gauge, hit
   **Repair** and watch the config cool to a valid state.

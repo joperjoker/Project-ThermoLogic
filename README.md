@@ -11,7 +11,7 @@ budget you control.
 
 By **Teo Qing Cong Eugene** · [linkedin.com/in/eugene-teo](https://www.linkedin.com/in/eugene-teo)
 
-📄 [Technical report](PAPER.md) · 📑 [PDF](ThermoLogic_TechnicalReport.pdf) · 📖 [Plain-English explainer](EXPLAINER.md) · 🕹️ [Interactive playground](playground.html) · 🧭 [Walkthrough](WALKTHROUGH.md)
+📄 [Technical report](PAPER.md) · 📑 [PDF](ThermoLogic_TechnicalReport.pdf) · 📖 [Plain-English explainer](EXPLAINER.md) · 🕹️ [Interactive playground](index.html) · 🧭 [Walkthrough](WALKTHROUGH.md)
 
 ---
 
