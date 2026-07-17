@@ -94,7 +94,9 @@
   beliefs be constrained — and repaired — by discrete logical rules, using only backpropagation?</i> The
   organizing metaphor is thermodynamic: logical validity corresponds to low energy (a ground state), a
   contradiction to high energy. Because the energy is differentiable, it can be minimized at training time (as a
-  loss) and at test time (as an inference procedure that repairs a given output).</p>
+  loss) and at test time (as an inference procedure that repairs a given output). <i>(The thermodynamic framing
+  is an analogy for intuition, not literal physics: there is no entropy, and the &ldquo;inverse temperature&rdquo;
+  &#946; is simply a hyperparameter that sharpens the penalty.)</i></p>
   <p><b>Contributions.</b> (1) A clean, reproducible DTP + EBM implementation with three t-norm families and
   residuated implications. (2) A label-free consistency signal + repair operator, and the finding that a plain
   supervised net matches on accuracy but not consistency — so the value is reliability, not accuracy (&sect;5.3).
@@ -143,7 +145,10 @@
   (plain SGD) turns atoms on one hop at a time — atom depth <code>d</code> activates only after <code>d&#8722;1</code>.
   Activation step is a strictly monotone, near-linear function of depth; the t-norm sets the slope
   (&#321;ukasiewicz 3.4 steps/hop; Product/G&ouml;del ~1.0). The clean monotone wave requires momentum-free SGD;
-  the robust claim is the within-chain wave and linear depth-cost at fixed length.</p>
+  the robust claim is the within-chain wave and linear depth-cost at fixed length. We stress that this linear
+  scaling is <i>intuitive, not surprising</i> — any iterative fixed-point or message-passing procedure needs steps
+  proportional to how far information must travel. The contribution is a clean, visual <i>demonstration</i> of that
+  behaviour in a differentiable-logic energy, not the discovery of a new scaling law.</p>
   <figure><img src="figures/fig_depth_wave.png" alt="depth wave" />
     <figcaption>Figure 1. (a) Truth propagates as a wave — one hop at a time. (b) Inference cost grows linearly
     with reasoning depth; the t-norm sets the propagation speed.</figcaption></figure>

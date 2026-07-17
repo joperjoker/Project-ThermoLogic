@@ -74,6 +74,10 @@ expensive. Crucially, the energy is differentiable, so it can be minimized **at
 training time** (as a loss) *and* **at test time** (as an inference procedure
 that repairs a given output).
 
+*(The thermodynamic framing is an analogy for intuition, not literal physics:
+there is no entropy, and the "inverse temperature" `β` is simply a hyperparameter
+that sharpens the penalty.)*
+
 ### 1.1 Contributions
 
 1. A clean, fully-reproducible **DTP + EBM** implementation with three t-norm
@@ -214,7 +218,12 @@ strictly monotone, near-linear function of depth; the t-norm sets the slope.
 *Caveats (honest):* the clean monotone wave requires momentum-free SGD (Adam's
 momentum accelerates and distorts the tail), and because energy is a *mean* over
 rules, longer chains propagate slightly slower per step. The robust claim is the
-within-chain monotone wave and linear depth-cost at fixed length.
+within-chain monotone wave and linear depth-cost at fixed length. We also stress
+that the linear scaling is **intuitive, not surprising**: any iterative fixed-
+point or message-passing procedure needs steps proportional to how far
+information must travel. The contribution here is a clean, visual *demonstration*
+of that behaviour in a differentiable-logic energy, not the discovery of a new
+scaling law.
 
 ### 5.2 Generalization and test-time repair
 
