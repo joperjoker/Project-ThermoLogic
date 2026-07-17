@@ -19,6 +19,14 @@
 
 ## Abstract
 
+> **In plain terms.** AI models often produce answers that break basic rules — an
+> invalid configuration, a self-contradiction — with no built-in way to notice.
+> ThermoLogic gives any answer a *score* for how much it breaks your rules (zero
+> means it obeys all of them), then "rolls it downhill" to the nearest valid
+> answer, using only the rules and no training data. This report shows the idea
+> works on a small benchmark, that the score doubles as a label-free error
+> detector, and that harder (deeper) reasoning takes proportionally more compute.
+
 Neural models trained by maximum likelihood have no internal mechanism that
 forbids logically inconsistent outputs. We present **Project ThermoLogic**, a
 compact PyTorch system that fuses **Differentiable Theorem Proving** (relaxing
