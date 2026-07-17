@@ -103,6 +103,10 @@ explored combination.
 
 ### 3.1 Discrete logic → differentiable tensors
 
+Throughout, an **atom** is a single atomic proposition — one true/false statement
+such as `Rain` or `sso_enabled` (the standard logic term for the smallest unit of
+a rule; unrelated to physics atoms despite the thermodynamic framing).
+
 Let `p_i ∈ [0,1]` be the belief that atom `i` is true. A literal's truth is `p_i`
 (or `1−p_i` if negated). A Horn rule `L₁ ∧ … ∧ Lₖ → C` scores as
 `sat = residuum( ⊗ᵢ truth(Lᵢ), truth(C) ) ∈ [0,1]`.

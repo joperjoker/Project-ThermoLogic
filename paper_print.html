@@ -95,6 +95,9 @@
   config-validation use case.</p>
 
   <h2>2. Method</h2>
+  <p>Throughout, an <b>atom</b> is a single atomic proposition — one true/false statement such as
+  <code>Rain</code> or <code>sso_enabled</code> (the standard logic term for the smallest unit of a rule;
+  unrelated to physics atoms despite the thermodynamic framing).</p>
   <p>Let <code>p_i &#8712; [0,1]</code> be the belief that atom <code>i</code> is true. A literal's truth is
   <code>p_i</code> (or <code>1&#8722;p_i</code> if negated). A Horn rule <code>L&#8321;&#8743;&#8230;&#8743;L_k &#8594; C</code>
   scores as <code>sat = residuum(&#8855;&#7522; truth(L&#7522;), truth(C))</code>. Modus ponens is emergent: with the

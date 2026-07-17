@@ -221,6 +221,44 @@ class TestLogicEnergyAPI(unittest.TestCase):
         rep = self.guard.repair(out, fixed=["sso_enabled"], budget=80)
         self.assertGreater(float(rep[0, self.atoms.index("sso_enabled")]), 0.5)
 
+    def test_snap_returns_crisp(self) -> None:
+        bad = torch.tensor([[0.9, 0.9, 0.9, 0.1]])
+        rep = self.guard.repair(bad, budget=120, snap=True)
+        # every value is exactly 0 or 1
+        self.assertTrue(bool(((rep == 0) | (rep == 1)).all()))
+        self.assertTrue(bool(self.guard.is_consistent(rep, crisp=True)))
+
+    def test_verify_reaches_valid_from_tiny_budget(self) -> None:
+        # A deliberately tiny starting budget must still yield a crisp-valid
+        # result thanks to verify=True auto-escalation.
+        bad = torch.tensor([[0.9, 0.9, 0.9, 0.1]])
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")  # fail if repair gives up
+            rep = self.guard.repair(bad, budget=1, snap=True, verify=True, max_budget=400)
+        self.assertTrue(bool(self.guard.is_consistent(rep, crisp=True)))
+
+    def test_crisp_vs_soft_consistency(self) -> None:
+        valid = torch.tensor([[0.0, 1.0, 0.0, 1.0]])   # enterprise, no sso — valid
+        self.assertTrue(bool(self.guard.is_consistent(valid, crisp=True)))
+        self.assertTrue(bool(self.guard.is_consistent(valid)))
+
+    def test_json_round_trip(self) -> None:
+        d = self.guard.to_dict()
+        clone = LogicEnergy.from_dict(d)
+        self.assertEqual(clone.atom_names, self.guard.atom_names)
+        probe = torch.tensor([[0.9, 0.9, 0.9, 0.1]])
+        self.assertAlmostEqual(float(clone.score(probe)), float(self.guard.score(probe)), places=5)
+        self.assertEqual(clone.violations(probe), self.guard.violations(probe))
+
+    def test_save_load(self) -> None:
+        import os, tempfile
+        path = os.path.join(tempfile.gettempdir(), "thermologic_rules_test.json")
+        self.guard.save(path)
+        clone = LogicEnergy.load(path)
+        self.assertEqual(clone.to_dict(), self.guard.to_dict())
+        os.remove(path)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

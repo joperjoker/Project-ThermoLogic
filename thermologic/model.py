@@ -414,7 +414,8 @@ def repair_beliefs(
     for step in range(steps):
         opt.zero_grad()
         state = current()
-        energy = ebm.energy_from_satisfaction(ebm.engine.satisfaction(state)).mean()
+        # state is sigmoid-bounded by construction, so skip the range re-check.
+        energy = ebm.energy_from_satisfaction(ebm.engine.satisfaction(state, validate=False)).mean()
         # Mean belief over the parsimony-masked atoms, averaged over the batch.
         denom = (par.sum() * state.shape[0]).clamp(min=1.0)
         parsimony = (state * par).sum() / denom
@@ -426,7 +427,7 @@ def repair_beliefs(
     with torch.no_grad():
         final = current()
         final_energy = float(
-            ebm.energy_from_satisfaction(ebm.engine.satisfaction(final)).mean()
+            ebm.energy_from_satisfaction(ebm.engine.satisfaction(final, validate=False)).mean()
         )
     trace.append((steps, final_energy))
     return RepairResult(beliefs=final.detach(), energy_trace=trace, steps=steps)

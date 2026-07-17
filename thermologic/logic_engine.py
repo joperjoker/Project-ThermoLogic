@@ -279,13 +279,17 @@ class DifferentiableLogicEngine(nn.Module):
         consequent = rule.consequent.truth(probs)
         return self._impl[self.tnorm](antecedent, consequent)
 
-    def satisfaction(self, probs: Tensor) -> Tensor:
+    def satisfaction(self, probs: Tensor, validate: bool = True) -> Tensor:
         """Per-rule satisfaction for a batch of beliefs.
 
         Parameters
         ----------
         probs:
             Tensor of shape ``(batch, num_atoms)`` with values in ``[0, 1]``.
+        validate:
+            Whether to range-check ``probs``. Defaults to ``True``. Hot inner
+            loops (e.g. test-time repair, where beliefs are already sigmoid-bounded)
+            pass ``False`` to skip a per-call device synchronization.
 
         Returns
         -------
@@ -297,7 +301,8 @@ class DifferentiableLogicEngine(nn.Module):
         ValueError
             If ``probs`` has the wrong shape or values outside ``[0, 1]``.
         """
-        self._check_probs(probs)
+        if validate:
+            self._check_probs(probs)
         columns: List[Tensor] = [
             self.rule_satisfaction(rule, probs) for rule in self.kb.rules
         ]

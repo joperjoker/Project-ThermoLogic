@@ -27,7 +27,9 @@ True
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+import json
+import warnings
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -153,6 +155,61 @@ class LogicEnergy:
         obj.beta = float(beta)
         return obj
 
+    # -- serialization (rules as data, not code) ---------------------------- #
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize the atoms, rules, t-norm, and beta to a JSON-friendly dict.
+
+        Atoms are referenced by name, so the rule set stays human-readable and can
+        live in a config file rather than in Python.
+        """
+        names = self.atom_names
+
+        def lit(li: Literal) -> Dict[str, Any]:
+            return {"atom": names[li.atom], "negated": bool(li.negated)}
+
+        return {
+            "atom_names": list(names),
+            "tnorm": self.engine.tnorm.value,
+            "beta": self.beta,
+            "rules": [
+                {
+                    "antecedents": [lit(a) for a in r.antecedents],
+                    "consequent": lit(r.consequent),
+                    "name": r.name,
+                }
+                for r in self.kb.rules
+            ],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LogicEnergy":
+        """Reconstruct a :class:`LogicEnergy` from :meth:`to_dict` output."""
+        atom_names = data["atom_names"]
+        rules = [
+            implies(
+                [a["atom"] for a in r["antecedents"]],
+                r["consequent"]["atom"],
+                negate_consequent=bool(r["consequent"].get("negated", False)),
+                negate_antecedents=[bool(a.get("negated", False)) for a in r["antecedents"]],
+                name=r.get("name", ""),
+            )
+            for r in data["rules"]
+        ]
+        return cls(rules, atom_names=atom_names,
+                   tnorm=data.get("tnorm", TNorm.LUKASIEWICZ.value),
+                   beta=float(data.get("beta", 4.0)))
+
+    def save(self, path: str) -> None:
+        """Write the rule set to a JSON file."""
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(self.to_dict(), fh, indent=2, ensure_ascii=False)
+
+    @classmethod
+    def load(cls, path: str) -> "LogicEnergy":
+        """Load a rule set previously written by :meth:`save`."""
+        with open(path, "r", encoding="utf-8") as fh:
+            return cls.from_dict(json.load(fh))
+
     # -- scoring ------------------------------------------------------------ #
     def _as_batch(self, outputs: Tensor) -> Tensor:
         if not isinstance(outputs, Tensor):
@@ -178,9 +235,29 @@ class LogicEnergy:
         batch = self._as_batch(outputs)
         return self._ebm.energy_from_satisfaction(self.engine.satisfaction(batch))
 
-    def is_consistent(self, outputs: Tensor, tol: float = 1e-3) -> Tensor:
-        """Boolean per-sample mask of whether every rule holds (``score ≤ tol``)."""
+    def is_consistent(self, outputs: Tensor, tol: float = 1e-3, crisp: bool = False) -> Tensor:
+        """Boolean per-sample mask of whether every rule holds.
+
+        Parameters
+        ----------
+        outputs:
+            ``(batch, num_atoms)`` (or ``(num_atoms,)``) belief vector.
+        tol:
+            Soft-energy tolerance (used when ``crisp=False``).
+        crisp:
+            If ``True``, threshold the beliefs to ``{0, 1}`` first and require
+            every rule to hold on the *discrete* state — the right check when the
+            output represents a decision/configuration rather than a probability.
+        """
+        if crisp:
+            return self._crisp_consistent(self._as_batch(outputs))
         return self.score(outputs) <= tol
+
+    def _crisp_consistent(self, batch: Tensor) -> Tensor:
+        """Per-sample mask: does the thresholded (0/1) state satisfy every rule?"""
+        crisp = (batch > 0.5).float()
+        sat = self.engine.satisfaction(crisp, validate=False)
+        return (sat > 0.5).all(dim=1)
 
     def violations(self, outputs: Tensor, threshold: float = 0.5) -> List[List[str]]:
         """Names of the rules each sample violates (fuzzy satisfaction < threshold)."""
@@ -200,6 +277,9 @@ class LogicEnergy:
         lr: float = 0.3,
         optimizer: str = "adam",
         parsimony: float = 0.0,
+        snap: bool = False,
+        verify: bool = False,
+        max_budget: int = 480,
         return_trace: bool = False,
     ) -> Union[Tensor, RepairResult]:
         """Repair an output to the nearest rule-satisfying state (energy descent).
@@ -222,23 +302,57 @@ class LogicEnergy:
         parsimony:
             Optional Occam pressure toward ``false`` on the free atoms; ``0`` (the
             default) repairs to the nearest state without a truth-minimizing bias.
+        snap:
+            If ``True``, threshold the repaired beliefs to a crisp ``{0, 1}`` state
+            before returning — what you want when the output is a discrete
+            decision/configuration rather than a probability.
+        verify:
+            If ``True``, check that the (thresholded) repaired state actually
+            satisfies every rule, and automatically double the budget (up to
+            ``max_budget``) until it does. Emits a warning if it still cannot —
+            so the caller is never handed a silently-invalid "repaired" output.
+        max_budget:
+            Ceiling for ``verify`` budget escalation.
         return_trace:
             If ``True`` return the full :class:`RepairResult` (with the energy
-            trajectory) instead of just the repaired tensor.
+            trajectory) instead of just the repaired tensor. Note its ``beliefs``
+            field is the soft (un-snapped) state.
 
         Returns
         -------
         Tensor or RepairResult
-            The repaired belief state (default), or the full result if requested.
+            The repaired belief state — crisp if ``snap=True`` — or the full
+            :class:`RepairResult` if ``return_trace=True``.
         """
         batch = self._as_batch(outputs)
         fixed_mask = torch.zeros(self.num_atoms)
         if fixed:
             for a in fixed:
                 fixed_mask[atom_index(a, self.atom_names)] = 1.0
-        result = repair_beliefs(
-            self._ebm, batch, fixed_mask, steps=budget, lr=lr,
-            parsimony_weight=parsimony, optimizer=optimizer,
-            log_every=max(1, budget // 20),
-        )
-        return result if return_trace else result.beliefs
+
+        def _run(steps: int) -> RepairResult:
+            return repair_beliefs(
+                self._ebm, batch, fixed_mask, steps=steps, lr=lr,
+                parsimony_weight=parsimony, optimizer=optimizer,
+                log_every=max(1, steps // 20),
+            )
+
+        result = _run(budget)
+        if verify:
+            used = budget
+            while used < max_budget and not bool(self._crisp_consistent(result.beliefs).all()):
+                used = min(max_budget, used * 2)
+                result = _run(used)
+            still_bad = int((~self._crisp_consistent(result.beliefs)).sum())
+            if still_bad:
+                warnings.warn(
+                    f"repair could not reach a crisp-valid state within budget={max_budget} "
+                    f"for {still_bad}/{batch.shape[0]} sample(s); returning the lowest-energy "
+                    f"state found. Try a larger max_budget or lr.",
+                    RuntimeWarning, stacklevel=2,
+                )
+
+        if return_trace:
+            return result
+        beliefs = result.beliefs
+        return (beliefs > 0.5).float() if snap else beliefs

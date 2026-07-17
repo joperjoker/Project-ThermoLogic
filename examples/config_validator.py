@@ -106,20 +106,20 @@ def demo() -> None:
 
         if score >= 1e-3:
             print(f"  rules broken : {violations}")
-            # Repair, holding the customer's chosen plan tier fixed.
+            # Repair, holding the customer's chosen plan tier fixed. snap=True
+            # returns a discrete config; verify=True guarantees it is valid
+            # (auto-raising the compute budget until every rule holds).
             chosen_plan = [p for p in PLAN_ATOMS if req.get(p)]
-            repaired = guard.repair(out, fixed=chosen_plan, budget=150, lr=0.3)
+            repaired = guard.repair(out, fixed=chosen_plan, budget=60,
+                                    snap=True, verify=True)
             fixed_flags = tensor_to_flags(repaired)
-            # A configuration is discrete: snap the repaired beliefs to crisp
-            # flags and re-score, so the reported result is the actual config.
-            crisp = config_to_tensor(fixed_flags)
             removed = [a for a in enabled(req) if not fixed_flags.get(a)]
             added = [a for a in enabled(fixed_flags) if a not in enabled(req)]
             print(f"  repaired to : {enabled(fixed_flags)}")
             print(f"     removed   : {removed or '—'}")
             print(f"     added     : {added or '—'}")
-            print(f"     new score : {float(guard.score(crisp)):8.4f}   "
-                  f"(rules broken: {guard.violations(crisp)[0] or 'none'})")
+            print(f"     new score : {float(guard.score(repaired)):8.4f}   "
+                  f"(rules broken: {guard.violations(repaired)[0] or 'none'})")
 
     print("\n" + "=" * 78)
     print("Takeaway: the same energy layer that SCORES invalid configs also REPAIRS")
