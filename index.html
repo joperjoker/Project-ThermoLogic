@@ -115,6 +115,17 @@
   footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
   footer a { color: var(--cyan); text-decoration: none; }
   .theme-btn { font-family: var(--mono); font-size: 11px; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  .howto { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 26px; }
+  @media (max-width: 640px) { .howto { grid-template-columns: 1fr; } }
+  .step { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .step .n { font-family: var(--mono); font-size: 11px; color: var(--cyan); font-weight: 700; }
+  .step .t { font-size: 13px; color: var(--ink); margin-top: 3px; }
+  .step .t b { color: var(--ink); }
+  .try { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--cyan); background: rgba(76,201,240,0.1); border: 1px solid var(--cyan-dim); border-radius: 6px; padding: 3px 8px; display: inline-block; margin-bottom: 12px; }
+  .explain { font-size: 13px; color: var(--muted); margin: 12px 0 2px; min-height: 20px; line-height: 1.5; }
+  .explain b { color: var(--ink); }
+  .hint { font-size: 11.5px; color: var(--faint); margin-top: 8px; }
+  .chip .why { opacity: .75; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -132,7 +143,7 @@
       </svg>
       <div>
         <h1>ThermoLogic</h1>
-        <div class="tagline">Reasoning as thermodynamics — an interactive console</div>
+        <div class="tagline">Catch &amp; fix AI answers that break your rules — live</div>
       </div>
     </div>
     <div class="byline">
@@ -142,21 +153,28 @@
   </header>
 
   <p class="lead">
-    A neural network's outputs can be constrained by hard logical rules through an <b>energy</b> function:
-    valid states sit at <b>low energy</b>, contradictions cost <b>exponentially</b> more. Below, two live
-    instruments. Left: score &amp; <b>repair</b> a structured configuration against business rules.
-    Right: watch a proof <b>propagate one step at a time</b> as you spend more test-time compute.
+    AI models happily produce answers that <b>break the rules</b> — an invalid setup, a self-contradiction.
+    ThermoLogic gives every answer an <b>“energy” score</b>: obeying the rules costs zero energy, breaking one
+    costs a lot. Then it rolls the answer <b>downhill to the nearest valid version</b> — the same idea as a ball
+    settling into a valley. No training data needed, just your rules. Two live demos below — click around.
   </p>
+
+  <div class="howto" aria-hidden="false">
+    <div class="step"><div class="n">STEP 1 — SCORE</div><div class="t">Measure how much an answer <b>breaks the rules</b> (its energy). Zero = all good.</div></div>
+    <div class="step"><div class="n">STEP 2 — EXPLAIN</div><div class="t">See <b>exactly which rules</b> it broke — in plain English.</div></div>
+    <div class="step"><div class="n">STEP 3 — REPAIR</div><div class="t">Auto-fix it to the <b>nearest valid answer</b>, changing as little as possible.</div></div>
+  </div>
 
   <div class="grid">
     <!-- ============ CONSTRAINT CONSOLE ============ -->
     <section class="panel" aria-labelledby="p1">
       <h2 id="p1">Constraint Console · the product</h2>
-      <p class="desc" id="cfgDesc">Toggle a SaaS plan and features. The energy gauge scores validity live. Hit&nbsp;Repair to roll the config downhill to the nearest valid state.</p>
+      <p class="desc" id="cfgDesc">A pretend SaaS signup with rules like “SSO needs the Enterprise plan.” Imagine an AI filled this in — is it valid?</p>
+      <span class="try">TRY: pick a plan, toggle features, then hit Repair</span>
 
       <div class="gauge">
         <div class="gauge-row">
-          <span class="gauge-label">logical energy</span>
+          <span class="gauge-label">rule-break score <span style="text-transform:none;letter-spacing:0">(0 = obeys every rule)</span></span>
           <span><span class="readout" id="cfgEnergy">0.00</span> <span class="status ok" id="cfgStatus">VALID</span></span>
         </div>
         <div class="gauge-track"><div class="gauge-fill" id="cfgFill"></div></div>
@@ -167,6 +185,7 @@
       <div class="grouplabel">Features requested</div>
       <div class="toggles" id="featToggles"></div>
 
+      <p class="explain" id="cfgExplain" aria-live="polite"></p>
       <div class="violations" id="cfgViolations" aria-live="polite"></div>
 
       <div class="actions">
@@ -178,9 +197,11 @@
     <!-- ============ REASONING WAVE ============ -->
     <section class="panel" aria-labelledby="p2">
       <h2 id="p2">Reasoning Wave · the finding</h2>
-      <p class="desc">A proof chain A₀→A₁→…→A₁₂. Truth propagates <b>one hop per few steps</b> of energy descent — deeper reasoning literally costs more test-time compute. The t-norm sets the speed.</p>
+      <p class="desc">A chain of reasoning: fact&nbsp;A forces&nbsp;B, which forces&nbsp;C… Each bar is one link. As the AI “thinks” longer, the truth spreads <b>one link at a time</b> — so deeper reasoning costs proportionally more thinking. A small original finding.</p>
+      <span class="try">TRY: drag the “compute” slider and watch the wave climb</span>
 
       <div class="wave-canvas-wrap"><canvas id="waveCanvas" width="900" height="330"></canvas></div>
+      <p class="hint">Each bar turns green as that step is proven true. The higher up the chain, the more “thinking steps” it takes to get there.</p>
 
       <div class="controls">
         <label for="stepSlider">compute</label>
@@ -197,7 +218,7 @@
       </div>
       <div class="stat-row">
         <div class="stat"><div class="k">chain energy</div><div class="v" id="waveEnergy">—</div></div>
-        <div class="stat"><div class="k">atoms proven</div><div class="v" id="waveProven">0 / 12</div></div>
+        <div class="stat"><div class="k">steps proven</div><div class="v" id="waveProven">0 / 12</div></div>
         <div class="stat"><div class="k">deepest reached</div><div class="v" id="waveDepth">0</div></div>
       </div>
     </section>
@@ -268,15 +289,15 @@ const LABEL = {plan_free:"Free",plan_pro:"Pro",plan_enterprise:"Enterprise",sso:
 const idx = a => ATOMS.indexOf(a);
 const L=(a,neg=false)=>({atom:idx(a),neg});
 const CRULES = [
-  {ante:[L("plan_free")],cons:L("plan_pro",true),name:"free⇒¬pro"},
-  {ante:[L("plan_free")],cons:L("plan_enterprise",true),name:"free⇒¬enterprise"},
-  {ante:[L("plan_pro")],cons:L("plan_enterprise",true),name:"pro⇒¬enterprise"},
-  {ante:[L("sso")],cons:L("plan_enterprise"),name:"sso⇒enterprise"},
-  {ante:[L("white_label")],cons:L("plan_enterprise"),name:"white_label⇒enterprise"},
-  {ante:[L("audit_logs")],cons:L("plan_free",true),name:"audit_logs⇒¬free"},
-  {ante:[L("priority_support")],cons:L("plan_free",true),name:"support⇒¬free"},
-  {ante:[L("custom_domain")],cons:L("plan_free",true),name:"custom_domain⇒¬free"},
-  {ante:[L("seats_gt_5")],cons:L("plan_free",true),name:"seats>5⇒¬free"},
+  {ante:[L("plan_free")],cons:L("plan_pro",true),name:"free⇒¬pro",why:"Only one plan tier at a time"},
+  {ante:[L("plan_free")],cons:L("plan_enterprise",true),name:"free⇒¬enterprise",why:"Only one plan tier at a time"},
+  {ante:[L("plan_pro")],cons:L("plan_enterprise",true),name:"pro⇒¬enterprise",why:"Only one plan tier at a time"},
+  {ante:[L("sso")],cons:L("plan_enterprise"),name:"sso⇒enterprise",why:"SSO needs the Enterprise plan"},
+  {ante:[L("white_label")],cons:L("plan_enterprise"),name:"white_label⇒enterprise",why:"White-label needs the Enterprise plan"},
+  {ante:[L("audit_logs")],cons:L("plan_free",true),name:"audit_logs⇒¬free",why:"Audit logs aren’t on the Free plan"},
+  {ante:[L("priority_support")],cons:L("plan_free",true),name:"support⇒¬free",why:"Priority support isn’t on the Free plan"},
+  {ante:[L("custom_domain")],cons:L("plan_free",true),name:"custom_domain⇒¬free",why:"Custom domain isn’t on the Free plan"},
+  {ante:[L("seats_gt_5")],cons:L("plan_free",true),name:"seats>5⇒¬free",why:"Free plan is capped at 5 seats"},
 ];
 let cfg = ATOMS.map(()=>0);
 cfg[idx("plan_pro")]=1; cfg[idx("sso")]=1; cfg[idx("audit_logs")]=1; cfg[idx("seats_gt_5")]=1;
@@ -308,7 +329,7 @@ function renderCfg(){
   const T=TNORMS.lukasiewicz;
   const p=cfg.map(v=>v);
   const e=energy(p,CRULES,T);
-  const viol=perRuleViolations(p,CRULES,T);
+  const violRules=CRULES.filter(r=>ruleSat(p,r,T)<0.5);
   document.getElementById("cfgEnergy").textContent=e.toFixed(2);
   const fill=document.getElementById("cfgFill");
   fill.style.width=Math.min(100, 6+e/6*94)+"%"; fill.style.background=heatColor(e);
@@ -316,9 +337,13 @@ function renderCfg(){
   const ok=e<1e-3;
   st.textContent=ok?"VALID":"INVALID"; st.className="status "+(ok?"ok":"bad");
   const vc=document.getElementById("cfgViolations"); vc.innerHTML="";
-  viol.forEach(v=>{const c=document.createElement("span");c.className="chip";c.textContent=v;vc.appendChild(c);});
+  violRules.forEach(r=>{const c=document.createElement("span");c.className="chip";c.title=r.name;c.textContent=r.why;vc.appendChild(c);});
+  const ex=document.getElementById("cfgExplain");
+  if(ok){ ex.innerHTML='<b>✅ This setup obeys every rule.</b> Nothing to fix.'; }
+  else { ex.innerHTML='<b>❌ This setup breaks '+violRules.length+' rule'+(violRules.length>1?'s':'')+
+    '</b> (below). Click <b>Repair</b> and watch the score cool to zero — it fixes the config by changing as few things as possible.'; }
   document.getElementById("repairBtn").disabled=ok;
-  document.getElementById("repairNote").textContent=ok?"already valid — nothing to repair":viol.length+" rule"+(viol.length>1?"s":"")+" broken";
+  document.getElementById("repairNote").textContent=ok?"already valid — nothing to repair":violRules.length+" rule"+(violRules.length>1?"s":"")+" broken";
 }
 document.getElementById("repairBtn").onclick=()=>{
   const T=TNORMS.lukasiewicz;
@@ -374,7 +399,7 @@ function drawWave(step){
   // axis labels
   ctx.fillStyle=css("--faint"); ctx.font="11px ui-monospace, monospace"; ctx.textAlign="center";
   for(let d=1;d<=K;d+=(K>10?2:1)){ ctx.fillText("A"+d, padL+bw*(d-0.5), H-8); }
-  ctx.save(); ctx.translate(12,padT+gh/2); ctx.rotate(-Math.PI/2); ctx.fillText("belief p(true)",0,0); ctx.restore();
+  ctx.save(); ctx.translate(12,padT+gh/2); ctx.rotate(-Math.PI/2); ctx.fillText("how true  (0 → 1)",0,0); ctx.restore();
   let proven=0, deepest=0;
   for(let d=1;d<=K;d++){
     const v=p[d]; if(v>0.5){proven++; deepest=d;}
