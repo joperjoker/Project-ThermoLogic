@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ThermoLogic — LinkedIn carousel</title>
+<style>
+  @page { size: 1080px 1080px; margin: 0; }
+  :root{
+    --bg:#0b0e14; --panel:#121723; --panel2:#0e131d; --line:#223047;
+    --ink:#eef3fa; --muted:#93a4bd; --faint:#5f7292;
+    --cold:#2bb673; --coldg:#3ddc97; --warm:#ff8c42; --hot:#ff3b30; --cyan:#4cc9f0;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:var(--sans);color:var(--ink)}
+  .slide{
+    width:1080px;height:1080px;position:relative;overflow:hidden;
+    background:radial-gradient(900px 500px at 85% -8%,rgba(76,201,240,.08),transparent 60%),var(--bg);
+    padding:84px 84px 76px;display:flex;flex-direction:column;
+    page-break-after:always;
+  }
+  .slide:last-child{page-break-after:auto}
+  .eyebrow{font-family:var(--mono);font-size:22px;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}
+  h1{font-family:var(--mono);font-weight:700;font-size:76px;line-height:1.08;letter-spacing:-.01em;text-wrap:balance}
+  h2{font-family:var(--mono);font-weight:700;font-size:58px;line-height:1.12;letter-spacing:-.01em;text-wrap:balance}
+  p{font-size:33px;line-height:1.5;color:var(--muted)}
+  p b{color:var(--ink);font-weight:600}
+  .big{font-size:38px;line-height:1.45}
+  .foot{position:absolute;left:84px;right:84px;bottom:44px;display:flex;justify-content:space-between;align-items:center;
+        font-family:var(--mono);font-size:20px;color:var(--faint)}
+  .foot .n{color:var(--muted)}
+  .spacer{flex:1}
+  .card{background:#fff;border-radius:18px;padding:14px;display:flex;align-items:center;justify-content:center}
+  .card img{max-width:100%;max-height:100%;display:block;border-radius:8px}
+  .cap{font-size:24px;color:var(--faint);margin-top:18px;line-height:1.4}
+  .pill{display:inline-block;font-family:var(--mono);font-size:22px;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--muted)}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .steps{display:flex;flex-direction:column;gap:22px;margin-top:14px}
+  .step{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--cyan);border-radius:14px;padding:26px 30px}
+  .step .k{font-family:var(--mono);font-size:24px;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase}
+  .step .t{font-size:32px;color:var(--ink);margin-top:8px;line-height:1.35}
+  .glyph{width:96px;height:96px}
+  .beforeafter{display:flex;flex-direction:column;gap:26px;margin-top:20px}
+  .ba{border-radius:16px;padding:28px 32px;border:1px solid var(--line)}
+  .ba.bad{background:rgba(255,59,48,.09);border-color:rgba(255,59,48,.4)}
+  .ba.good{background:rgba(43,182,115,.1);border-color:rgba(43,182,115,.45)}
+  .ba .lab{font-family:var(--mono);font-size:24px;letter-spacing:.08em;text-transform:uppercase}
+  .ba.bad .lab{color:var(--hot)} .ba.good .lab{color:var(--coldg)}
+  .ba .body{font-size:32px;color:var(--ink);margin-top:10px;line-height:1.4}
+  .ba .body span{color:var(--muted)}
+  .arrow{font-family:var(--mono);font-size:34px;color:var(--cyan);text-align:center}
+  .links{display:flex;flex-direction:column;gap:18px;margin-top:10px;font-family:var(--mono);font-size:30px}
+  .links div{color:var(--ink)}
+  .links .u{color:var(--cyan)}
+  .two{display:flex;gap:22px}
+  .two .col{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px}
+  .two .col .h{font-family:var(--mono);font-size:26px;text-transform:uppercase;letter-spacing:.1em}
+  .two .col.is .h{color:var(--coldg)} .two .col.isnt .h{color:var(--warm)}
+  .two .col p{font-size:27px;margin-top:12px;color:var(--muted);line-height:1.4}
+  .kpi{font-family:var(--mono);font-weight:700;color:var(--coldg)}
+  .swipe{font-family:var(--mono);font-size:30px;color:var(--cyan);margin-top:20px}
+</style>
+</head>
+<body>
+
+<!-- 1 — TITLE -->
+<div class="slide">
+  <div class="eyebrow">Interactive demo · paper · open code</div>
+  <div class="spacer"></div>
+  <svg class="glyph" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#2bb673"/><stop offset=".55" stop-color="#ff8c42"/><stop offset="1" stop-color="#ff3b30"/></linearGradient></defs>
+    <path d="M6 40 C 16 40, 16 10, 24 10 S 32 40, 42 40" stroke="url(#g)" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="24" cy="10" r="3.6" fill="#4cc9f0"/><circle cx="6" cy="40" r="2.8" fill="#2bb673"/>
+  </svg>
+  <h1 style="margin-top:34px">AI breaks rules<br/>with total confidence.</h1>
+  <p class="big" style="margin-top:28px">I built a way to <b>catch it — and fix it</b> — using an idea borrowed from physics.</p>
+  <div class="swipe">Swipe →</div>
+  <div class="spacer"></div>
+  <div class="foot"><span>ThermoLogic</span><span class="n">Teo Qing Cong Eugene</span></div>
+</div>
+
+<!-- 2 — PROBLEM -->
+<div class="slide">
+  <div class="eyebrow">The problem</div>
+  <h2 style="margin-top:26px">Trained to sound right,<br/>not to be right.</h2>
+  <div class="spacer"></div>
+  <p class="big">Neural networks optimise for what <b>looks</b> plausible. Nothing inside them forbids a <b>logically impossible</b> answer — an invalid configuration, a self-contradiction.</p>
+  <p class="big" style="margin-top:30px">Worse: they hand it to you with <b>full confidence</b> and <b>no signal</b> that anything is wrong.</p>
+  <div class="spacer"></div>
+  <div class="foot"><span>The problem</span><span class="n">02</span></div>
+</div>
+
+<!-- 3 — IDEA -->
+<div class="slide">
+  <div class="eyebrow">The idea</div>
+  <h2 style="margin-top:26px">Reasoning as thermodynamics</h2>
+  <p class="big" style="margin-top:24px">Give every answer an <b>energy</b>. Obey the rules → <b>0 energy</b> (a valley). Break one → <b>high energy</b> (a hill). "Thinking" is letting the answer roll <b>downhill</b> to a valley.</p>
+  <div class="spacer"></div>
+  <svg viewBox="0 0 900 300" style="width:100%;height:300px">
+    <path d="M0 60 C 150 60, 180 250, 300 250 S 470 70, 600 70 S 760 250, 900 250" fill="none" stroke="#2a3a54" stroke-width="4"/>
+    <path d="M0 60 C 150 60, 180 250, 300 250 S 470 70, 600 70" fill="none" stroke="url(#g2)" stroke-width="6" stroke-linecap="round"/>
+    <defs><linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#ff3b30"/><stop offset="1" stop-color="#2bb673"/></linearGradient></defs>
+    <circle cx="300" cy="235" r="16" fill="#4cc9f0"/>
+    <text x="300" y="292" fill="#3ddc97" font-family="monospace" font-size="24" text-anchor="middle">valid · E = 0</text>
+    <text x="70" y="44" fill="#ff6b5a" font-family="monospace" font-size="24">contradiction · high E</text>
+  </svg>
+  <div class="spacer"></div>
+  <div class="foot"><span>Reasoning as thermodynamics</span><span class="n">03</span></div>
+</div>
+
+<!-- 4 — HOW IT WORKS -->
+<div class="slide">
+  <div class="eyebrow">How it works</div>
+  <h2 style="margin-top:26px">Score → Explain → Repair</h2>
+  <div class="steps" style="margin-top:40px">
+    <div class="step"><div class="k">1 · Score</div><div class="t">Measure how much an answer <b>breaks your rules</b>. Zero means it obeys all of them — no labels required.</div></div>
+    <div class="step"><div class="k">2 · Explain</div><div class="t">Surface <b>exactly which rules</b> it broke, in plain English.</div></div>
+    <div class="step"><div class="k">3 · Repair</div><div class="t">Roll it downhill to the <b>nearest valid answer</b>, changing as little as possible.</div></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="foot"><span>How it works</span><span class="n">04</span></div>
+</div>
+
+<!-- 5 — DEMO -->
+<div class="slide">
+  <div class="eyebrow">Live in the browser</div>
+  <h2 style="margin-top:22px">A working demonstrator</h2>
+  <div class="card" style="margin-top:34px;flex:1;max-height:640px">
+    <img src="playground_preview.png" alt="ThermoLogic console" />
+  </div>
+  <p class="cap">Toggle a configuration; the gauge scores validity live; one click repairs it to a valid state — the same engine as the PyTorch library, running client-side.</p>
+  <div class="spacer"></div>
+  <div class="foot"><span>Interactive console</span><span class="n">05</span></div>
+</div>
+
+<!-- 6 — BEFORE / AFTER -->
+<div class="slide">
+  <div class="eyebrow">Example · auto-repair</div>
+  <h2 style="margin-top:22px">An invalid signup, fixed</h2>
+  <div class="beforeafter">
+    <div class="ba bad">
+      <div class="lab">✗ Before — breaks a rule</div>
+      <div class="body"><b>Pro</b> plan · <span>requests</span> SSO, Audit logs, Seats&gt;5<br/><span>→ SSO needs the Enterprise plan</span></div>
+    </div>
+    <div class="arrow">▼ repair (energy descent)</div>
+    <div class="ba good">
+      <div class="lab">✓ After — valid</div>
+      <div class="body"><b>Pro</b> plan · Audit logs, Seats&gt;5 <span>· SSO removed</span><br/><span>→ obeys every rule, minimal change</span></div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="foot"><span>Repair in action</span><span class="n">06</span></div>
+</div>
+
+<!-- 7 — FINDING 1 -->
+<div class="slide">
+  <div class="eyebrow">Finding 1</div>
+  <h2 style="margin-top:22px">The value is <span style="color:var(--coldg)">reliability</span>, not accuracy</h2>
+  <div class="card" style="margin-top:30px;flex:1;max-height:560px"><img src="../figures/fig_baselines.png" alt="baselines"/></div>
+  <p class="cap">A plain neural net matches on accuracy (0.955) — but its answers are logically <b style="color:#ff8c42">inconsistent</b>. Only the energy layer gives a label-free <b class="kpi">consistency guarantee</b> (0.001).</p>
+  <div class="spacer"></div>
+  <div class="foot"><span>Reliability, not accuracy</span><span class="n">07</span></div>
+</div>
+
+<!-- 8 — FINDING 2 -->
+<div class="slide">
+  <div class="eyebrow">Finding 2</div>
+  <h2 style="margin-top:22px">Deeper reasoning = more compute</h2>
+  <div class="card" style="margin-top:30px;flex:1;max-height:560px"><img src="../figures/fig_depth_wave.png" alt="depth wave"/></div>
+  <p class="cap">Watching the energy descent, truth propagates through a chain of rules <b>one hop at a time</b> — so twice the reasoning depth costs about twice the "thinking." A small original finding.</p>
+  <div class="spacer"></div>
+  <div class="foot"><span>Depth = test-time compute</span><span class="n">08</span></div>
+</div>
+
+<!-- 9 — HONEST FRAMING -->
+<div class="slide">
+  <div class="eyebrow">Straight talk</div>
+  <h2 style="margin-top:22px">What this is (and isn't)</h2>
+  <div class="two" style="margin-top:40px">
+    <div class="col is"><div class="h">It is</div><p>A reproducible <b style="color:#eef3fa">proof-of-concept</b> and a small usable tool. Builds openly on prior neuro-symbolic work (LTN, DeepProbLog, Semantic Loss). Every claim tied to a number.</p></div>
+    <div class="col isnt"><div class="h">It isn't</div><p>An LLM upgrade, or a claim to have "solved" hallucination. It works today on <b style="color:#eef3fa">structured outputs with clear rules</b> — configs, forms, tabular decisions.</p></div>
+  </div>
+  <div class="spacer"></div>
+  <p class="big">Scaling the idea toward language models is the road ahead — the vision, not a result.</p>
+  <div class="spacer"></div>
+  <div class="foot"><span>Honest scope</span><span class="n">09</span></div>
+</div>
+
+<!-- 10 — CTA -->
+<div class="slide">
+  <div class="eyebrow">Try it · read it · build with it</div>
+  <h2 style="margin-top:24px">Have a look 👇</h2>
+  <div class="links" style="margin-top:40px">
+    <div>🕹️ Live demo &nbsp; <span class="u">joperjoker.github.io/Project-ThermoLogic</span></div>
+    <div>📄 Technical report (PDF) &nbsp; <span class="u">in the repo</span></div>
+    <div>💻 Code &nbsp; <span class="u">github.com/joperjoker/Project-ThermoLogic</span></div>
+    <div>📦 <span class="u">pip install -e .</span> &nbsp; from thermologic import LogicEnergy</div>
+  </div>
+  <div class="spacer"></div>
+  <p class="big">If your team fights constraint-satisfaction on AI outputs — configs, forms, compliance — I'd love to compare notes.</p>
+  <div class="swipe" style="margin-top:24px">— Teo Qing Cong Eugene · linkedin.com/in/eugene-teo</div>
+  <div class="spacer"></div>
+  <div class="foot"><span>ThermoLogic</span><span class="n">10</span></div>
+</div>
+
+</body>
+</html>
