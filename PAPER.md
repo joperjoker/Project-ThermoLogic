@@ -488,6 +488,41 @@ for enterprise-only SSO), names the broken rule, and repairs to the nearest vali
 configuration. *v1 scope:* structured/tabular outputs with propositional rules;
 general LLM-text validation is roadmap, not a claim.
 
+### 6.1 A harder, first-order-grounded benchmark
+
+To move past the toy scale we build a realistic **cloud security-configuration**
+benchmark (`benchmarks/cloud_config.py`) — the kind of policy checking cloud-
+posture tools perform. Rules are written as **first-order templates** with a
+variable over resources (e.g. `∀r: has_pii(r) → encrypted(r)`) and **grounded**
+over `n` resources into a propositional KB (the standard neuro-symbolic route to
+first-order logic). With 3 resources this yields **20 atoms, 19 rules, and 432
+distinct valid worlds** — a real held-out generalization test. Trained with a
+world-level split (288 train / 144 unseen), the full model reaches **100% policy
+consistency** and `0.83` control accuracy on unseen configurations, confirming the
+pipeline scales beyond the 11-atom toy.
+
+### 6.2 End-to-end integration: a guardrail on a plain model
+
+We then wire `LogicEnergy` onto a **plain multi-label network trained with no
+logic** (`integration_demo.py`) — the realistic "drop it after someone else's
+model" case. On unseen cloud configs the plain model emits **13.6% policy-
+violating** outputs; the guardrail flags every one, with the exact broken rule,
+**no labels** — and `repair` restores **100% consistency**.
+
+**Figure 11 — LogicEnergy as a guardrail: flag every non-compliant config, then repair.**
+
+![Integration](figures/fig_integration.png)
+
+Two honest calibrations of the claim: **(i)** the flag has **~100% precision** — a
+flagged output is not a valid world, so it cannot equal the (valid) ground truth —
+but it detects *policy inconsistency*, not general correctness, so it misses
+consistent-but-wrong outputs (a *high-precision, not high-recall* detector).
+**(ii)** repair *guarantees consistency*, not correctness: it enforces the rules
+against the model's own recovered facts, so when inputs are noisy, control
+accuracy is bounded by input quality (here `0.85`, essentially unchanged) rather
+than magically improved. The unambiguous product value is a **label-free,
+deterministic policy checker + repairer** that bolts onto any model.
+
 ---
 
 ## 7. Discussion & limitations

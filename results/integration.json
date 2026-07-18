@@ -1,0 +1,8 @@
+{
+  "frac_flagged": 0.13633333146572113,
+  "control_acc": 0.8511666655540466,
+  "P_wrong_given_flagged": 1.0,
+  "P_wrong_given_unflagged": 0.9251254200935364,
+  "repaired_consistent": 1.0,
+  "repaired_acc": 0.755299985408783
+}

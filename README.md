@@ -66,6 +66,8 @@ python experiments_baselines.py          # energy repair vs. projection baseline
 python experiments_through_repair.py     # train THROUGH the repair (the differentiability win)
 python experiments_supervision.py        # pre- vs post-repair supervision (honest null result)
 python experiments_semisup.py            # logic as a semi-supervised loss on a hard rule (+26 pts)
+python benchmarks/cloud_config.py        # harder first-order-grounded benchmark (20 atoms, 432 worlds)
+python integration_demo.py               # LogicEnergy as a guardrail on a plain model (end-to-end)
 python examples/config_validator.py      # worked use case: SaaS config validator
 python -m unittest discover -s tests     # unit tests
 ```
@@ -81,6 +83,8 @@ Every figure and number regenerates from a named script (fixed seeds, CPU):
 | Train through the repair (§5.8) | `experiments_through_repair.py` | — (console) |
 | Pre- vs post-repair supervision, null (§5.9) | `experiments_supervision.py` | `fig_supervision` |
 | Semi-supervised hard rule, +26 pts (§5.10) | `experiments_semisup.py` | `fig_semisup` |
+| Harder first-order-grounded benchmark (§6.1) | `benchmarks/cloud_config.py` | — (console) |
+| End-to-end guardrail integration (§6.2) | `integration_demo.py` | `fig_integration` |
 | Plain-language slide charts | `assets/make_slide_figures.py` | `slide_depthwave`, `slide_baselines` |
 
 Run everything at once: `./reproduce.sh`.

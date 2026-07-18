@@ -243,6 +243,12 @@
   A worked SaaS config-validation example flags an invalid plan (e.g. a Pro request for enterprise-only SSO), names
   the rule, and repairs to the nearest valid configuration. v1 scope: structured/tabular outputs with propositional
   rules; general LLM-text validation is roadmap, not a claim.</p>
+  <p><b>Harder benchmark + end-to-end integration.</b> A realistic cloud security-configuration benchmark, written
+  as first-order templates (∀ resource r) and <i>grounded</i> over 3 resources, gives 20 atoms, 19 rules, and
+  <b>432 distinct worlds</b> — the pipeline reaches 100% consistency there. Wiring <code>LogicEnergy</code> onto a
+  <i>plain</i> network trained with no logic, it flags the 13.6% of unseen configs that violate policy (exact rule,
+  no labels; ~100% precision) and repairs to 100% consistency. Honest limits: it detects <i>policy inconsistency</i>,
+  not general correctness, and repair guarantees consistency (not correctness) against the model's recovered inputs.</p>
 
   <h2>6. Discussion &amp; limitations</h2>
   <p>The honest value proposition is a label-free consistency guarantee and repair, not beating supervised learning

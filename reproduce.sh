@@ -22,7 +22,13 @@ echo ">> [4/6] pre- vs post-repair supervision (null result) -> figures/fig_supe
 echo ">> [5/6] semi-supervised hard rule (the win) -> figures/fig_semisup.png + results/semisup.json"
 "$PY" experiments_semisup.py
 
-echo ">> [6/6] plain-language slide figures -> assets/slide_{depthwave,baselines}.png"
+echo ">> [6/8] harder first-order-grounded cloud benchmark (§6.1)"
+"$PY" benchmarks/cloud_config.py
+
+echo ">> [7/8] end-to-end guardrail integration -> figures/fig_integration.png (§6.2)"
+"$PY" integration_demo.py
+
+echo ">> [8/8] plain-language slide figures -> assets/slide_{depthwave,baselines}.png"
 "$PY" assets/make_slide_figures.py
 
 echo ">> unit tests"
