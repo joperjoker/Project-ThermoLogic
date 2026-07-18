@@ -70,6 +70,21 @@ python examples/config_validator.py      # worked use case: SaaS config validato
 python -m unittest discover -s tests     # unit tests
 ```
 
+## Reproducibility
+
+Every figure and number regenerates from a named script (fixed seeds, CPU):
+
+| Result | Script | Figure(s) |
+|---|---|---|
+| Core (wave, generalization, repair curve, baselines, robustness, t-norm, landscape) | `experiments.py` | `fig_depth_wave`, `fig_generalization`, `fig_repair_curve`, `fig_baselines`, `fig_robustness`, `fig_tnorm`, `fig_energy_landscape` |
+| Energy repair vs. projection + scaling (§5.7) | `experiments_baselines.py` | `fig_projection_baseline` |
+| Train through the repair (§5.8) | `experiments_through_repair.py` | — (console) |
+| Pre- vs post-repair supervision, null (§5.9) | `experiments_supervision.py` | `fig_supervision` |
+| Semi-supervised hard rule, +26 pts (§5.10) | `experiments_semisup.py` | `fig_semisup` |
+| Plain-language slide charts | `assets/make_slide_figures.py` | `slide_depthwave`, `slide_baselines` |
+
+Run everything at once: `./reproduce.sh`.
+
 ## Repository layout
 
 | Path | Role |
