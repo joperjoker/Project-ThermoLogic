@@ -64,6 +64,7 @@ supervised net matches on accuracy (`0.955`) but its outputs are logically
 python experiments.py                    # regenerate all figures + results/metrics.json
 python experiments_baselines.py          # energy repair vs. projection baselines + scaling
 python experiments_through_repair.py     # train THROUGH the repair (the differentiability win)
+python experiments_supervision.py        # pre- vs post-repair supervision (honest null result)
 python examples/config_validator.py      # worked use case: SaaS config validator
 python -m unittest discover -s tests     # unit tests
 ```

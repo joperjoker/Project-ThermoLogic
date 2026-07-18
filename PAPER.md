@@ -370,7 +370,37 @@ derived-atom accuracy climbs from `0.47` (init) to **`0.993`** as the readout MS
 falls `0.25 → 0.08`. A projection-in-the-loop receives zero gradient here and
 cannot learn this at all. This is the honest answer to "why not just project?":
 when the repair must live *inside* a learned system, differentiability is not a
-nicety — it is the whole point.
+nicety — it is the whole point. (But see §5.9 for where this benefit does *not*
+appear.)
+
+### 5.9 A negative result: logic-in-the-loop does not always help
+
+It is tempting to claim that training through the repair is *generally* a better
+inductive bias. We tested this fairly and it is **not true on this benchmark**
+(`experiments_supervision.py`). With identical architecture, initialization,
+optimizer, and *full* per-atom labels, we compared **pre-repair** supervision
+(`BCE(proposer(x), y)`) against **post-repair** supervision (`BCE(repair(proposer(x)), y)`),
+sweeping the number of distinct training worlds (2 → 12 of 18, six held out), 3
+seeds, both evaluated identically with test-time repair.
+
+**Figure 9 — Null result: with full labels, training through repair ties standard supervision.**
+
+![Supervision](figures/fig_supervision.png)
+
+The two curves coincide at every point (e.g. `0.807` vs `0.805` at 6 worlds;
+`0.948` vs `0.948` at 12) — no generalization benefit, and no consistency
+difference. The reason is instructive: the derived atoms here are *simple*
+functions of the causes, so a plain network learns them from data and test-time
+repair becomes a no-op on the trained outputs. Logic-as-inductive-bias can only
+help when the logical relationship is **hard to learn from data**, which this toy
+is not.
+
+**The honest, scoped conclusion.** Differentiable repair provides a *real
+capability* — training under supervision that a projection cannot backpropagate
+(§5.8) — but it is **not** a free generalization win when full labels are already
+available (§5.9). Establishing a task where post-repair supervision *beats*
+pre-repair on held-out data (e.g. a parity/deep-conjunction target that MLPs
+generalize poorly but rules enforce exactly) remains open, and we do not claim it.
 
 ---
 
@@ -400,6 +430,11 @@ general LLM-text validation is roadmap, not a claim.
 
 - **Reliability, not accuracy.** The honest value proposition is a label-free
   consistency guarantee and repair, not beating supervised learning on accuracy.
+- **Not better than a solver on accuracy.** An exact projection ties or beats
+  energy repair (§5.7); the differentiators are scaling and differentiability.
+- **Differentiability is a capability, not always a benefit.** Training through the
+  repair enables supervision a projection cannot (§5.8), but gives no measurable
+  generalization gain when full labels are available (§5.9, a null result).
 - **Amortized vs. iterative inference.** The proposer is one forward pass; the
   energy adds an iterative, budgetable inference step — a small instance of
   "test-time compute" for logical consistency.

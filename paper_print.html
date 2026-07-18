@@ -220,6 +220,11 @@
   through the repair, per-atom logical correctness emerges: derived-atom accuracy climbs from 0.47 to <b>0.993</b>. A
   projection-in-the-loop gets zero gradient and cannot learn this. That is the honest answer to &ldquo;why not just
   project?&rdquo;: when the repair must live inside a learned system, differentiability is the whole point.</p>
+  <p><b>A negative result (for balance).</b> We also tested whether training through the repair is a <i>general</i>
+  inductive-bias win. With full per-atom labels and identical settings, pre-repair and post-repair supervision tie
+  exactly on held-out worlds (e.g. 0.807 vs 0.805 at 6 training worlds; 0.948 vs 0.948 at 12) &mdash; no benefit,
+  because the derived logic here is easily learned from data. Logic-in-the-loop helps only when the relationship is
+  hard to learn; we do not claim a generalization win, only the distinct <i>capability</i> above.</p>
 
   <h2>5. The product</h2>
   <p>The mechanism ships as <code>thermologic</code>, a differentiable logic-energy layer that drops after any
