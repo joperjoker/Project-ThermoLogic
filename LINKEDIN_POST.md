@@ -53,8 +53,9 @@ compare notes.
 6. Example — an invalid signup, auto-repaired.
 7. Finding 1 — reliability, not accuracy (baselines chart).
 8. Finding 2 — deeper reasoning = more compute (wave chart).
-9. What this is (and isn’t) — honest scope.
-10. CTA — demo / paper / code / `pip install`.
+9. The honest scorecard — where it helps, ties, and doesn’t.
+10. What this is (and isn’t) — honest scope.
+11. CTA — demo / paper / code / `pip install`.
 
 Rebuild the deck after edits: open `assets/carousel.html` in a browser and
 Print → Save as PDF (paper size 1080×1080 px / “square”), or re-run the headless
