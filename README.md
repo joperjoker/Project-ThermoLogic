@@ -62,8 +62,10 @@ supervised net matches on accuracy (`0.955`) but its outputs are logically
 ```bash
 ./run.sh                                 # autonomous training pipeline
 python experiments.py                    # regenerate all figures + results/metrics.json
+python experiments_baselines.py          # energy repair vs. projection baselines + scaling
+python experiments_through_repair.py     # train THROUGH the repair (the differentiability win)
 python examples/config_validator.py      # worked use case: SaaS config validator
-python -m unittest discover -s tests     # 18 unit tests
+python -m unittest discover -s tests     # unit tests
 ```
 
 ## Repository layout

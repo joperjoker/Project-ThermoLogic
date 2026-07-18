@@ -200,6 +200,27 @@
     <figcaption>Figure 7. Energy partitions all 2^11 = 2048 Boolean worlds into consistent (E=0) vs. contradictions
     (294 consistent; the rest carry energy in [5.96, 41.69]).</figcaption></figure>
 
+  <h3>4.5 Do you even need learning? Energy repair vs. projection</h3>
+  <p>The obvious objection is &ldquo;why not just project the output onto the nearest valid state with a solver?&rdquo;
+  We compare against forward-chaining (a Horn-KB oracle), an exact confidence-weighted projection (enumerate valid
+  completions, pick the nearest to the model's soft output), and a greedy flip search &mdash; all holding the recovered
+  causes fixed. <b>We report this honestly: on accuracy, energy repair does not win.</b> Exact projection and the
+  forward-chaining oracle match it (0.969&#8211;0.973 vs 0.970, within noise), and the exact projection changes the
+  fewest bits by construction; energy repair lands on the <i>same</i> valid state as the exact projection 96% of the
+  time. Its advantages are elsewhere and real: <b>(i) scaling</b> &mdash; projection enumerates 2<sup>d</sup>
+  completions (0.4 ms at d=4 &#8594; 968 ms at d=18, crossing energy repair's flat cost near d&#8776;17; MaxSAT/ILP is
+  also NP-hard and non-differentiable), while energy repair stays O(steps&#215;rules); and <b>(ii) differentiability</b>
+  &mdash; a projection is a non-differentiable argmin, whereas repair can be trained through.</p>
+  <figure><img src="figures/fig_projection_baseline.png" alt="projection baseline" />
+    <figcaption>Figure 8. Energy repair vs. projection: accuracy is a tie (a); scaling and differentiability are not (b).</figcaption></figure>
+  <p><b>Training through repair (the capability projection lacks).</b> Because repair is gradient descent, it can be
+  unrolled into a differentiable module and placed inside a training loop. The gradient of a post-repair loss w.r.t.
+  the network is <b>0.19 through differentiable repair and exactly 0.00 through a projection</b>. Supervising a proposer
+  with <i>only a scalar readout</i> of the repaired state &mdash; no per-atom labels &mdash; and training end-to-end
+  through the repair, per-atom logical correctness emerges: derived-atom accuracy climbs from 0.47 to <b>0.993</b>. A
+  projection-in-the-loop gets zero gradient and cannot learn this. That is the honest answer to &ldquo;why not just
+  project?&rdquo;: when the repair must live inside a learned system, differentiability is the whole point.</p>
+
   <h2>5. The product</h2>
   <p>The mechanism ships as <code>thermologic</code>, a differentiable logic-energy layer that drops after any
   model: <code>score()</code> gives a label-free inconsistency signal, <code>violations()</code> names the broken

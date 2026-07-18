@@ -314,6 +314,64 @@ default.
 Of `2048` Boolean worlds, exactly `294` satisfy all rules (`E=0`); the rest carry
 energy in `[5.96, 41.69]`. The energy *is* the indicator of logical validity.
 
+### 5.7 Do you even need learning? Energy repair vs. projection
+
+The obvious objection to a differentiable repair is: *why not just project the
+output onto the nearest valid state with a solver?* We compare energy repair
+against four alternatives that all hold the recovered causes fixed
+(`experiments_baselines.py`, 3 seeds): the raw **feed-forward** output;
+**forward-chaining** (recompute derived atoms by the rules — a Horn-KB oracle);
+an **exact projection** that enumerates the valid completions and picks the one
+closest to the model's *soft* output (confidence-weighted); and a **greedy**
+violation-reducing flip search.
+
+**Figure 8 — Energy repair vs. projection: accuracy is a tie; scaling and differentiability are not.**
+
+![Projection baseline](figures/fig_projection_baseline.png)
+
+**Table 6 — Repair methods on unseen worlds (mean over 3 seeds).**
+
+| Method | Derived acc | Valid | Δ from proposal (Hamming) | Agrees w/ exact | Time/sample |
+|---|---|---|---|---|---|
+| Feed-forward (no repair) | `0.927` | `0.78` | `0.00` | `0.78` | — |
+| Forward-chaining (Horn oracle) | `0.973` | `1.00` | `0.41` | `0.92` | `0.02 ms` |
+| Exact projection (conf-weighted) | `0.969` | `1.00` | **`0.26`** | `1.00` | `0.30 ms` |
+| Greedy repair | `0.959` | `0.97` | `0.21` | `0.97` | `1.70 ms` |
+| **Energy repair (ours)** | `0.970` | `1.00` | `0.31` | `0.96` | `0.21 ms` |
+
+**We report this honestly: on accuracy, energy repair does not win.** Exact
+projection and the forward-chaining oracle match it (`0.969`–`0.973` vs `0.970`,
+within noise), and by construction the exact projection changes the fewest bits.
+Energy repair lands on the *same* valid state as the exact projection **96%** of
+the time — it is a good, cheap approximation of it, not a better answer.
+
+The energy's advantages are elsewhere, and they are real:
+
+- **Scaling (Figure 8b).** Exact projection enumerates `2ᵈ` completions; its cost
+  grows from `0.4 ms` at `d=4` to `968 ms` at `d=18` (doubling each step), crossing
+  energy repair's roughly-flat cost near `d≈17`. Beyond that, enumeration is
+  intractable and even a MaxSAT/ILP projection is NP-hard and non-differentiable;
+  energy repair stays `O(steps × rules)`.
+- **Differentiability (§5.8).** A projection is a non-differentiable `argmin`;
+  energy repair can be *trained through*.
+
+### 5.8 The capability projection cannot provide: training through repair
+
+Because repair is gradient descent, it can be **unrolled into a differentiable
+module** and placed inside a training loop (`experiments_through_repair.py`). The
+gradient of a post-repair loss w.r.t. the network is **`0.19` through
+differentiable repair and exactly `0.00` through a projection** (a discrete
+`argmin` has no gradient).
+
+This is not academic. We supervise a proposer with **only a scalar readout** of
+the repaired state (the mean of the derived atoms) — *no per-atom labels* — and
+train it end-to-end *through* the repair. Per-atom logical correctness **emerges**:
+derived-atom accuracy climbs from `0.47` (init) to **`0.993`** as the readout MSE
+falls `0.25 → 0.08`. A projection-in-the-loop receives zero gradient here and
+cannot learn this at all. This is the honest answer to "why not just project?":
+when the repair must live *inside* a learned system, differentiability is not a
+nicety — it is the whole point.
+
 ---
 
 ## 6. The product
