@@ -225,6 +225,11 @@
   exactly on held-out worlds (e.g. 0.807 vs 0.805 at 6 training worlds; 0.948 vs 0.948 at 12) &mdash; no benefit,
   because the derived logic here is easily learned from data. Logic-in-the-loop helps only when the relationship is
   hard to learn; we do not claim a generalization win, only the distinct <i>capability</i> above.</p>
+  <p><b>…but it helps where theory predicts.</b> Used as a semi-supervised loss on <i>unlabelled</i> data for a
+  <i>hard</i> target (parity of four bits, which MLPs generalize poorly), the differentiable-logic energy lifts
+  feed-forward parity accuracy by up to <b>+26 points</b> over labels-only (0.65 &#8594; 0.91 at 64 labels), with the
+  gain largest when labels are scarce and vanishing once labels are plentiful. The precise boundary: the logic is
+  inert when the target is easy and labels plentiful, and valuable when the target is hard and labels are few.</p>
 
   <h2>5. The product</h2>
   <p>The mechanism ships as <code>thermologic</code>, a differentiable logic-energy layer that drops after any

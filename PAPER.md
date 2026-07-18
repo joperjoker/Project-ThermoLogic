@@ -398,9 +398,45 @@ is not.
 **The honest, scoped conclusion.** Differentiable repair provides a *real
 capability* — training under supervision that a projection cannot backpropagate
 (§5.8) — but it is **not** a free generalization win when full labels are already
-available (§5.9). Establishing a task where post-repair supervision *beats*
-pre-repair on held-out data (e.g. a parity/deep-conjunction target that MLPs
-generalize poorly but rules enforce exactly) remains open, and we do not claim it.
+available (§5.9). It *does* help under the conditions theory predicts — see §5.10.
+
+### 5.10 Where the logic genuinely helps: semi-supervised learning of a hard rule
+
+The null result of §5.9 has two escapes, both suggested by the semantic-loss
+literature (Xu et al., 2018): the logic should help when labels are **scarce**
+*and* the target is **hard to learn from data**. We test both at once
+(`experiments_semisup.py`) with **parity** — the canonical function an MLP
+generalizes poorly — as the derived atom `Z = parity(A₀…A₃)` (16 minterm rules
+fully define it). We compare **labels-only** training against the same plus the
+**energy (logical inconsistency) as a loss on unlabelled data**, evaluated
+feed-forward on the parity bit, sweeping the number of labels (3 seeds).
+
+**Figure 10 — The logic genuinely helps when labels are scarce and the rule is hard.**
+
+![Semi-supervised parity](figures/fig_semisup.png)
+
+**Table 7 — Parity-bit accuracy (feed-forward, 3 seeds).**
+
+| # labels | labels-only | + logic energy | gain |
+|---|---|---|---|
+| 8 | `0.500` | `0.496` | — (too few to bootstrap) |
+| 16 | `0.508` | `0.569` | +0.06 |
+| 32 | `0.578` | `0.758` | **+0.18** |
+| 64 | `0.651` | `0.909` | **+0.26** |
+| 128 | `0.902` | `0.985` | +0.08 |
+| 256 | `0.996` | `1.000` | — (both saturate) |
+
+Adding the differentiable-logic energy on unlabelled data lifts parity accuracy
+by up to **+26 points** (`0.65 → 0.91` at 64 labels). The gain is largest in the
+mid-label regime and vanishes at both ends — below `~8` labels there is too
+little signal to bootstrap, and above `~256` the labels alone suffice. This is
+exactly the semi-supervised, hard-target regime where a logic loss should help,
+and it does.
+
+**Putting §5.9 and §5.10 together** gives the precise boundary: the logic is
+inert when the target is easily learned and labels are plentiful (§5.9), and
+valuable when labels are scarce and the target is hard (§5.10) — an honest,
+predictable characterization rather than a blanket "it helps" claim.
 
 ---
 
@@ -435,6 +471,10 @@ general LLM-text validation is roadmap, not a claim.
 - **Differentiability is a capability, not always a benefit.** Training through the
   repair enables supervision a projection cannot (§5.8), but gives no measurable
   generalization gain when full labels are available (§5.9, a null result).
+- **The logic helps under known conditions.** As a semi-supervised loss on
+  unlabelled data it lifts a *hard* target (parity) by up to +26 points when
+  labels are scarce (§5.10) — inert when the target is easy, valuable when it is
+  hard and labels are few.
 - **Amortized vs. iterative inference.** The proposer is one forward pass; the
   energy adds an iterative, budgetable inference step — a small instance of
   "test-time compute" for logical consistency.

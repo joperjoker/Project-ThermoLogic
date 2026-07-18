@@ -65,6 +65,7 @@ python experiments.py                    # regenerate all figures + results/metr
 python experiments_baselines.py          # energy repair vs. projection baselines + scaling
 python experiments_through_repair.py     # train THROUGH the repair (the differentiability win)
 python experiments_supervision.py        # pre- vs post-repair supervision (honest null result)
+python experiments_semisup.py            # logic as a semi-supervised loss on a hard rule (+26 pts)
 python examples/config_validator.py      # worked use case: SaaS config validator
 python -m unittest discover -s tests     # unit tests
 ```
