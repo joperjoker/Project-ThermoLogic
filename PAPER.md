@@ -35,7 +35,7 @@ belief state's energy is `~0` when it satisfies every rule and grows
 *exponentially* as rules are violated. A small MLP (the *Neural Proposer*)
 proposes probabilistic truth values; the energy then acts as a differentiable
 *prover*. On an 11-atom benchmark with a genuine world-level train/test split we
-report three findings. **(1)** A plain supervised network matches ThermoLogic on
+report five findings. **(1)** A plain supervised network matches ThermoLogic on
 raw accuracy (`0.955` vs `0.970`) but its outputs are logically *inconsistent*
 (mean energy `0.95`); the energy layer's value is a **label-free consistency
 guarantee** (energy `0.001`), not accuracy. **(2)** **Test-time energy repair** —
@@ -44,9 +44,18 @@ into a valid one (`0.935 → 0.971` accuracy, energy `0.90 → 0.0006`), a form 
 inference-time reasoning. **(3)** In a proof chain, truth propagates through the
 energy **one hop at a time**: inference cost grows *linearly with reasoning
 depth*, and the choice of t-norm sets the propagation speed (`~3.4` descent steps
-per hop for Łukasiewicz vs `~1.0` for Gödel/Product). We package the mechanism as
-a small library (`thermologic`) that **scores** and **repairs** any model's
-structured output against hard rules at a controllable compute budget.
+per hop for Łukasiewicz vs `~1.0` for Gödel/Product). We then ask *"why not just
+project onto the nearest valid state with a solver?"* and answer it honestly:
+**(4)** an exact projection **ties** energy repair on accuracy (`0.969` vs
+`0.970`) — the energy's edge is instead **linear scaling** where enumeration
+explodes (`2ᵈ`) and **differentiability**, which lets the repair be *trained
+through* (a projection gives zero gradient). Finally we map the boundary of that
+benefit: **(5)** with full labels and an easily-learned target it is a **null**
+(no generalization gain), but as a semi-supervised loss on a *hard* target
+(parity) it lifts accuracy by up to **+26 points** when labels are scarce — the
+regime theory predicts. We package the mechanism as a small library
+(`thermologic`) that **scores** and **repairs** any model's structured output
+against hard rules at a controllable compute budget.
 
 **Keywords:** neuro-symbolic AI, energy-based models, differentiable logic,
 t-norms, test-time compute, constraint satisfaction, guardrails, PyTorch.
@@ -89,7 +98,11 @@ that sharpens the penalty.)*
    compute–consistency curve (§5.2).
 4. The **truth-propagation wave**: reasoning depth ↦ test-time compute is linear,
    and the t-norm sets the speed (§5.1).
-5. A small **product** — `LogicEnergy.score()/repair()` — and a worked config-
+5. An **honest boundary analysis**: energy repair ties an exact solver on accuracy
+   but wins on scaling and differentiability (§5.7–5.8); training-through-repair is
+   a null with easy targets/full labels (§5.9) yet gives **+26 points** as a
+   semi-supervised loss on a hard target (§5.10).
+6. A small **product** — `LogicEnergy.score()/repair()` — and a worked config-
    validation use case.
 
 ---
@@ -194,7 +207,22 @@ encodings of the cause atoms (σ=0.12) plus 3 distractor dims.
 
 ## 5. Experiments
 
-All numbers regenerate via `python experiments.py` (seeds fixed; CPU-deterministic).
+All numbers regenerate from the scripts named per subsection (seeds fixed;
+CPU-deterministic). Rather than argue the method is uniformly good, we map
+*exactly* where the logic helps and where it does not.
+
+**Table 3 — Findings scorecard (does the differentiable logic help?).**
+
+| Question | Answer | Where |
+|---|---|---|
+| Is repair a form of inference-time reasoning? | **Yes** — energy → 0, unseen acc `0.935→0.971` | §5.2 |
+| Does reasoning depth cost compute? | **Yes** — linear, one hop at a time | §5.1 |
+| More accurate than a plain net? | **No** — comparable; the win is *consistency* | §5.3 |
+| More accurate than an exact solver/projection? | **No** — a tie (`0.970` vs `0.969`) | §5.7 |
+| Then why not just use a solver? | Energy **scales linearly** (solver is `2ᵈ`) and is **differentiable** | §5.7–5.8 |
+| Can you train *through* it? | **Yes** — a projection gives zero gradient | §5.8 |
+| Does training-through-repair improve generalization? | **No** (full labels, easy target — a null) | §5.9 |
+| Does the logic ever improve learning? | **Yes** — semi-supervised, hard target: **+26 pts** | §5.10 |
 
 ### 5.1 Logical energy as test-time compute (the propagation wave)
 
@@ -207,7 +235,7 @@ strictly monotone, near-linear function of depth; the t-norm sets the slope.
 
 ![Depth wave](figures/fig_depth_wave.png)
 
-**Table 3 — Propagation speed (k=20 chain).**
+**Table 4 — Propagation speed (k=20 chain).**
 
 | t-norm | steps per reasoning hop | wave monotonic? |
 |---|---|---|
@@ -235,7 +263,7 @@ them.
 
 ![Generalization](figures/fig_generalization.png)
 
-**Table 4 — Generalization (mean ± std, 5 seeds).**
+**Table 5 — Generalization (mean ± std, 5 seeds).**
 
 | Split | Derived accuracy | Mean energy |
 |---|---|---|
@@ -268,7 +296,7 @@ anything is wrong. Only the energy provides a **label-free consistency guarantee
 
 ![Baselines](figures/fig_baselines.png)
 
-**Table 5 — Baselines on unseen worlds (mean ± std, 3 seeds).**
+**Table 6 — Baselines on unseen worlds (mean ± std, 3 seeds).**
 
 | Method | Derived accuracy | Mean energy (consistency) |
 |---|---|---|
@@ -329,7 +357,7 @@ violation-reducing flip search.
 
 ![Projection baseline](figures/fig_projection_baseline.png)
 
-**Table 6 — Repair methods on unseen worlds (mean over 3 seeds).**
+**Table 7 — Repair methods on unseen worlds (mean over 3 seeds).**
 
 | Method | Derived acc | Valid | Δ from proposal (Hamming) | Agrees w/ exact | Time/sample |
 |---|---|---|---|---|---|
@@ -415,7 +443,7 @@ feed-forward on the parity bit, sweeping the number of labels (3 seeds).
 
 ![Semi-supervised parity](figures/fig_semisup.png)
 
-**Table 7 — Parity-bit accuracy (feed-forward, 3 seeds).**
+**Table 8 — Parity-bit accuracy (feed-forward, 3 seeds).**
 
 | # labels | labels-only | + logic energy | gain |
 |---|---|---|---|

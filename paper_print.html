@@ -75,14 +75,19 @@
   PyTorch system that fuses Differentiable Theorem Proving (relaxing discrete rules into fuzzy-logic t-norms)
   with an Energy-Based Model: a belief state's energy is ~0 when it satisfies every rule and grows exponentially
   as rules are violated. A small MLP proposes probabilistic truth values; the energy acts as a differentiable
-  prover. On an 11-atom benchmark with a genuine world-level train/test split we report three findings.
+  prover. On an 11-atom benchmark with a genuine world-level train/test split we report five findings.
   (1) A plain supervised network matches ThermoLogic on raw accuracy (0.955 vs 0.970) but its outputs are
   logically inconsistent (mean energy 0.95); the energy layer's value is a <b>label-free consistency guarantee</b>
   (energy 0.001), not accuracy. (2) <b>Test-time energy repair</b> — gradient descent on the energy — turns an
   inconsistent output on unseen inputs into a valid one (0.935&#8594;0.971 accuracy; energy 0.90&#8594;0.0006).
   (3) In a proof chain, truth propagates <b>one hop at a time</b>: inference cost grows linearly with reasoning
   depth, and the t-norm sets the propagation speed (~3.4 descent steps/hop for &#321;ukasiewicz vs ~1.0 for
-  G&ouml;del/Product). The mechanism ships as a small library that scores and repairs any model's structured
+  G&ouml;del/Product). (4) Asked &ldquo;why not just project onto the nearest valid state with a solver?&rdquo;, we
+  answer honestly: an exact projection <b>ties</b> on accuracy (0.969 vs 0.970) — the energy's edge is <b>linear
+  scaling</b> (a solver is 2<sup>d</sup>) and <b>differentiability</b> (it can be trained through; a projection
+  gives zero gradient). (5) That differentiability is a null for generalization with full labels, but as a
+  semi-supervised loss on a <i>hard</i> target (parity) it lifts accuracy by up to <b>+26 points</b> when labels
+  are scarce. The mechanism ships as a small library that scores and repairs any model's structured
   output against hard rules at a controllable compute budget.</p>
   <p class="kw"><span class="lbl">Keywords:</span> neuro-symbolic AI, energy-based models, differentiable logic,
   t-norms, test-time compute, constraint satisfaction, guardrails, PyTorch.</p>
