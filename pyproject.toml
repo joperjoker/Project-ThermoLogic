@@ -16,19 +16,33 @@ keywords = [
     "pytorch", "guardrails",
 ]
 classifiers = [
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+    "Operating System :: OS Independent",
 ]
 dependencies = ["torch>=2.0"]
 
 [project.optional-dependencies]
 experiments = ["numpy", "matplotlib"]
-dev = ["pytest"]
+dev = ["pytest", "build", "twine"]
 
 [project.urls]
+Homepage = "https://github.com/joperjoker/Project-ThermoLogic"
+Repository = "https://github.com/joperjoker/Project-ThermoLogic"
+Demo = "https://joperjoker.github.io/Project-ThermoLogic/"
 Author = "https://www.linkedin.com/in/eugene-teo"
 
 [tool.setuptools]
 packages = ["thermologic"]
+
+[tool.setuptools.package-data]
+thermologic = ["py.typed"]
