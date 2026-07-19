@@ -75,7 +75,7 @@
   PyTorch system that fuses Differentiable Theorem Proving (relaxing discrete rules into fuzzy-logic t-norms)
   with an Energy-Based Model: a belief state's energy is ~0 when it satisfies every rule and grows exponentially
   as rules are violated. A small MLP proposes probabilistic truth values; the energy acts as a differentiable
-  prover. On an 11-atom benchmark with a genuine world-level train/test split we report five findings.
+  prover. On an 11-atom benchmark with a genuine world-level train/test split we report six findings.
   (1) A plain supervised network matches ThermoLogic on raw accuracy (0.955 vs 0.970) but its outputs are
   logically inconsistent (mean energy 0.95); the energy layer's value is a <b>label-free consistency guarantee</b>
   (energy 0.001), not accuracy. (2) <b>Test-time energy repair</b> — gradient descent on the energy — turns an
@@ -87,7 +87,12 @@
   scaling</b> (a solver is 2<sup>d</sup>) and <b>differentiability</b> (it can be trained through; a projection
   gives zero gradient). (5) That differentiability is a null for generalization with full labels, but as a
   semi-supervised loss on a <i>hard</i> target (parity) it lifts accuracy by up to <b>+26 points</b> when labels
-  are scarce. The mechanism ships as a small library that scores and repairs any model's structured
+  are scarce. (6) On an <i>external, non-circular</i> benchmark we did not author — order-4 Latin squares — the
+  method <b>loses on both axes</b>: an exact solver dominates soft energy repair at runtime (100% vs 3.6% valid)
+  and the logic loss gives no training-time lift, because those constraints are permutation-symmetric and carry
+  no signal about the target. The transferable rule: reach for the differentiable logic when you need a
+  <i>gradient</i>, <i>scale</i> past enumeration, or <i>scarce-label target signal</i> — and skip it when a solver
+  fits. The mechanism ships as a small library that scores and repairs any model's structured
   output against hard rules at a controllable compute budget.</p>
   <p class="kw"><span class="lbl">Keywords:</span> neuro-symbolic AI, energy-based models, differentiable logic,
   t-norms, test-time compute, constraint satisfaction, guardrails, PyTorch.</p>
@@ -249,6 +254,19 @@
   <i>plain</i> network trained with no logic, it flags the 13.6% of unseen configs that violate policy (exact rule,
   no labels; ~100% precision) and repairs to 100% consistency. Honest limits: it detects <i>policy inconsistency</i>,
   not general correctness, and repair guarantees consistency (not correctness) against the model's recovered inputs.</p>
+  <p><b>An adversarial head-to-head — where our method loses.</b> To rebut the &ldquo;circular ground truth&rdquo;
+  objection we ran a deliberately hostile test on a canonical, externally-defined problem: recovering order-4
+  <b>Latin squares</b> (labels = the 576 real squares, enumerated independently; 64 atoms, 288 rules) from a noisy
+  observation. It loses on <i>both</i> axes, and we report it plainly. At runtime an exact nearest-valid-grid solver
+  <b>dominates</b> soft energy repair (100% vs 3.6% valid; 0.27 vs 0.03 grid-exact) — for small, clean, propositional
+  constraints a solver is simply the right tool. At training time the logic loss gives <i>no</i> lift (a shade lower
+  at every label budget), because Latin-square constraints are permutation-symmetric: they forbid conflicts but carry
+  no signal about <i>which</i> value belongs in a cell. This sharpens the semi-supervised boundary above: the logic
+  aids learning only when the constraint is <i>informative about the target</i> (parity), not merely satisfied by it.</p>
+  <figure><img src="figures/fig_latin.png" alt="Latin-square head-to-head" />
+    <figcaption>Figure 9. The honest external head-to-head on Latin squares. (a) At runtime an exact solver
+    dominates soft energy repair; (b) at training time the logic loss gives no lift on this permutation-symmetric
+    task. The method wins when you need a gradient, scale past enumeration, or scarce-label target signal — not here.</figcaption></figure>
 
   <h2>6. Discussion &amp; limitations</h2>
   <p>The honest value proposition is a label-free consistency guarantee and repair, not beating supervised learning

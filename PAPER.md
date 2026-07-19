@@ -35,7 +35,7 @@ belief state's energy is `~0` when it satisfies every rule and grows
 *exponentially* as rules are violated. A small MLP (the *Neural Proposer*)
 proposes probabilistic truth values; the energy then acts as a differentiable
 *prover*. On an 11-atom benchmark with a genuine world-level train/test split we
-report five findings. **(1)** A plain supervised network matches ThermoLogic on
+report six findings. **(1)** A plain supervised network matches ThermoLogic on
 raw accuracy (`0.955` vs `0.970`) but its outputs are logically *inconsistent*
 (mean energy `0.95`); the energy layer's value is a **label-free consistency
 guarantee** (energy `0.001`), not accuracy. **(2)** **Test-time energy repair** —
@@ -53,7 +53,14 @@ through* (a projection gives zero gradient). Finally we map the boundary of that
 benefit: **(5)** with full labels and an easily-learned target it is a **null**
 (no generalization gain), but as a semi-supervised loss on a *hard* target
 (parity) it lifts accuracy by up to **+26 points** when labels are scarce — the
-regime theory predicts. We package the mechanism as a small library
+regime theory predicts. **(6)** On an *external, non-circular* benchmark we did
+not author — order-4 Latin squares — the method **loses on both axes**: an exact
+solver dominates soft energy repair at runtime (100% vs 3.6% validity) and the
+logic loss gives no training-time lift, because those constraints are
+permutation-symmetric and carry no signal about the target. The transferable
+rule is therefore precise: the differentiable logic is worth reaching for when
+you need a *gradient*, *scale* past enumeration, or *scarce-label target signal*
+— and worth skipping when a solver fits. We package the mechanism as a small library
 (`thermologic`) that **scores** and **repairs** any model's structured output
 against hard rules at a controllable compute budget.
 
@@ -223,6 +230,7 @@ CPU-deterministic). Rather than argue the method is uniformly good, we map
 | Can you train *through* it? | **Yes** — a projection gives zero gradient | §5.8 |
 | Does training-through-repair improve generalization? | **No** (full labels, easy target — a null) | §5.9 |
 | Does the logic ever improve learning? | **Yes** — semi-supervised, hard target: **+26 pts** | §5.10 |
+| On an external, non-circular benchmark (Latin squares)? | **No** — a solver dominates at runtime; the loss gives no lift | §6.3 |
 
 ### 5.1 Logical energy as test-time compute (the propagation wave)
 
@@ -523,6 +531,65 @@ accuracy is bounded by input quality (here `0.85`, essentially unchanged) rather
 than magically improved. The unambiguous product value is a **label-free,
 deterministic policy checker + repairer** that bolts onto any model.
 
+### 6.3 An adversarial head-to-head: where our method *loses*
+
+Every benchmark so far uses rules we wrote and worlds we generated from them —
+so a skeptic can object that the ground truth is *circular*. To answer that we
+ran a deliberately hostile head-to-head on a **canonical, externally-defined**
+problem: **order-4 Latin squares** (`benchmarks/latin_square.py`). The labels
+are the **576 real Latin squares** (enumerated by backtracking, independently of
+our logic); the constraints (each value once per row and per column) are a
+*property* of the answer, not the recipe that made it; and the task —
+recovering the grid from a **noisy observation** (σ=0.9) — genuinely needs both
+perception and constraints. The KB grounds to **64 atoms and 288 rules**. This
+is the fairest possible test, and we report the result whichever way it falls.
+
+It falls *against* us, on **both** axes, and that is worth stating plainly.
+
+**Table 8 — Latin squares: three ways to enforce constraints on one fixed net (σ=0.9, 2 000 test grids).**
+
+| Method | per-cell acc | grid-exact | valid square |
+|---|---|---|---|
+| ML-only (argmax) | 0.615 | 0.007 | 0.009 |
+| **ML + exact solver** (nearest of 576 valid grids) | **0.647** | **0.269** | **1.000** |
+| ML + energy repair (ours) | 0.633 | 0.027 | 0.036 |
+
+**Figure 12 — The honest head-to-head. (a) At runtime an exact solver dominates soft energy repair; (b) at training time the logic loss gives no lift on this task.**
+
+![Latin squares](figures/fig_latin.png)
+
+**At runtime, the exact solver crushes energy repair** (100% valid, 0.27
+grid-exact vs. 3.6% / 0.03). The reason is structural, not a bug: enumerating
+and snapping to the nearest of 576 valid grids is a *global* discrete search,
+whereas soft energy descent on a softmax-parametrised belief lowers pairwise
+conflict locally and drifts toward flat, degenerate low-energy states rather
+than a crisp valid grid. When a problem is small enough to enumerate and its
+constraints are clean and propositional, **a solver is simply the right tool** —
+exactly the caveat of §5.7, now confirmed on a benchmark we did not author.
+
+**At training time the logic loss also fails to help** — per-cell accuracy is a
+shade *lower* with the loss at every label budget (e.g. 0.345→0.334 at 20
+labels). This looks like it contradicts the +26-point semi-supervised win of
+§5.10, but it sharpens it. Parity worked because *the constraint is the target*:
+knowing the parity bit is exactly the missing supervision. Latin-square
+constraints are **permutation-symmetric** — they forbid conflicts but say
+nothing about *which* value belongs in a cell; that information lives only in the
+observation. A loss that rewards *any* conflict-free grid therefore injects no
+signal about the correct one and mildly competes with the cross-entropy. The
+precise, transferable lesson:
+
+> The differentiable logic helps a model *learn* only when the constraints are
+> **informative about the target**, not merely satisfied by it. It helps a model
+> *stay consistent* always — but for small, clean, propositional constraint
+> problems an exact solver enforces consistency better and cheaper.
+
+This is the most useful negative result in the paper: it draws the boundary of
+the method from the outside. The honest readout of the whole project is not
+"logic-energy beats solvers" — it does not — but "a *differentiable, linearly-
+scaling* consistency layer that is worth reaching for when you need a gradient
+(§5.8), when the constraint carries target signal under scarce labels (§5.10),
+or when enumeration is infeasible — and worth skipping when a solver fits."
+
 ---
 
 ## 7. Discussion & limitations
@@ -537,7 +604,15 @@ deterministic policy checker + repairer** that bolts onto any model.
 - **The logic helps under known conditions.** As a semi-supervised loss on
   unlabelled data it lifts a *hard* target (parity) by up to +26 points when
   labels are scarce (§5.10) — inert when the target is easy, valuable when it is
-  hard and labels are few.
+  hard and labels are few. It helps learning only when the constraint is
+  *informative about the target*: on Latin squares, whose constraints are
+  permutation-symmetric and target-agnostic, it gives no lift (§6.3).
+- **A solver can simply be better.** On an external, non-circular benchmark
+  (Latin squares) an exact nearest-valid-grid solver dominates soft energy
+  repair at runtime (100% vs 3.6% validity, §6.3). For small, clean,
+  propositional constraint problems, reach for a solver; reserve the energy
+  layer for when you need a gradient, scarce-label target signal, or scale where
+  enumeration is infeasible.
 - **Amortized vs. iterative inference.** The proposer is one forward pass; the
   energy adds an iterative, budgetable inference step — a small instance of
   "test-time compute" for logical consistency.
@@ -566,7 +641,10 @@ honest, reproducible substrate — and a usable tool — for constraint-aware ML
 ```bash
 ./run.sh                                  # train pipeline
 python experiments.py                     # regenerate all figures + metrics.json
-python -m unittest discover -s tests      # 18 tests
+python benchmarks/cloud_config.py         # §6.1 first-order-grounded benchmark
+python benchmarks/latin_square.py         # §6.3 external solver head-to-head
+python integration_demo.py                # §6.2 guardrail on a plain model
+python -m unittest discover -s tests      # 23 tests
 python examples/config_validator.py       # worked use case
 ```
 
