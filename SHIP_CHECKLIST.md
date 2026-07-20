@@ -33,13 +33,13 @@ twine upload dist/*       # user: __token__, paste your PyPI API token
 - **PDF (academic report):** `ThermoLogic_TechnicalReport.pdf` — regenerated, now
   includes the Semantic Loss novelty check, measured scaling, and the honest
   external Latin-square loss.
-- **Slides (carousel):** `ThermoLogic_LinkedIn_Slides.pdf` (1080×1080).
+- **Slides (carousel):** `ThermoLogic_LinkedIn_Slides.pdf` (1080×1080, 14 slides) —
+  refreshed to include the three new findings: it genuinely helps learning /
+  is a distinct mechanism from Semantic Loss (slide 9), scales past enumeration
+  to 9×9 Sudoku (slide 10), and the "I tested where it loses" integrity slide
+  (slide 11).
 - **Draft copy:** `LINKEDIN_POST.md`.
 - Author line and profile (`www.linkedin.com/in/eugene-teo`) are already set.
-
-> Note: the carousel slides predate the four new findings (§5.11, §6.3–§6.5). If
-> you want them reflected on the slides, say the word and I'll refresh the deck;
-> the PDF report and the paper are already fully up to date.
 
 ## What each headline claim rests on (so you can defend it)
 | Claim | Evidence | Honest caveat |

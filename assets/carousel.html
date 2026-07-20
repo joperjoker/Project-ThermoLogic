@@ -176,22 +176,62 @@
   <div class="foot"><span>Depth = test-time compute</span><span class="n">08</span></div>
 </div>
 
-<!-- 9 — HONEST SCORECARD -->
+<!-- 9 — FINDING 3: GENUINELY HELPS LEARNING + NOVELTY -->
+<div class="slide">
+  <div class="eyebrow">Finding 3</div>
+  <h2 style="margin-top:22px">It can teach a model a <span style="color:var(--coldg)">hard rule</span></h2>
+  <div class="card" style="margin-top:26px;flex:1;max-height:520px"><img src="slide_novelty.png" alt="novelty vs semantic loss"/></div>
+  <p class="cap">On a rule that's hard to learn from data (parity), using the logic on <b>unlabelled</b> examples lifts accuracy by up to <b class="kpi">+26 points</b> when labels are scarce — and it's a <b>distinct mechanism</b> from the closest prior art (Semantic Loss): as good here, and far more robust to tuning.</p>
+  <div class="spacer"></div>
+  <div class="foot"><span>Genuinely helps learning</span><span class="n">09</span></div>
+</div>
+
+<!-- 10 — SCALING -->
+<div class="slide">
+  <div class="eyebrow">Finding 4 · built to scale</div>
+  <h2 style="margin-top:22px">Works when there are <span style="color:var(--coldg)">too many answers to list</span></h2>
+  <div class="card" style="margin-top:26px;flex:1;max-height:520px"><img src="slide_scaling.png" alt="scaling to sudoku"/></div>
+  <p class="cap">From a 3×3 grid up to <b>9×9 Sudoku</b> (≈6.7×10²¹ valid answers), the "list every valid answer" approach explodes ~20 orders of magnitude — our method keeps running in seconds. <span style="color:var(--faint)">(Honest note: a purpose-built solver still handles Sudoku; the point is a <b style="color:#93a4bd">generic, trainable</b> layer that doesn't need one.)</span></p>
+  <div class="spacer"></div>
+  <div class="foot"><span>Scales past enumeration</span><span class="n">10</span></div>
+</div>
+
+<!-- 11 — I TESTED WHERE IT LOSES -->
+<div class="slide">
+  <div class="eyebrow">Research integrity</div>
+  <h2 style="margin-top:22px">I built the test designed to <span style="color:var(--warm)">make it fail</span></h2>
+  <div class="spacer"></div>
+  <p class="big">To rebut "you graded your own homework," I ran a head-to-head on a problem I <b>did not design the rules for</b> — recovering real <b>Latin squares</b> from noise.</p>
+  <div class="beforeafter" style="margin-top:6px">
+    <div class="ba bad">
+      <div class="lab">✗ Where it loses</div>
+      <div class="body">A classic solver <b>beats</b> my method here <span>(100% vs 3.6% valid)</span><br/><span>— for small, clean puzzles, use a solver.</span></div>
+    </div>
+    <div class="ba good">
+      <div class="lab">✓ Why that matters</div>
+      <div class="body">Reporting the loss is what makes the <b>wins</b> credible.<br/><span>Reliability comes from honesty, not spin.</span></div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="foot"><span>Reported where it loses</span><span class="n">11</span></div>
+</div>
+
+<!-- 12 — HONEST SCORECARD -->
 <div class="slide">
   <div class="eyebrow">The honest scorecard</div>
   <h2 style="margin-top:18px">Where it helps — and where it doesn't</h2>
   <div class="steps" style="margin-top:28px;gap:13px">
     <div class="step" style="border-left-color:#2bb673;padding:18px 26px"><div class="t" style="font-size:27px">✅ <b>Guarantees consistency</b> — flags &amp; repairs rule-breaks a plain net can't even detect</div></div>
-    <div class="step" style="border-left-color:#2bb673;padding:18px 26px"><div class="t" style="font-size:27px">✅ <b>Scales linearly</b> where an exact solver explodes (2ᵈ), and is <b>differentiable</b> — trainable through</div></div>
+    <div class="step" style="border-left-color:#2bb673;padding:18px 26px"><div class="t" style="font-size:27px">✅ <b>Keeps running</b> where "list every valid answer" explodes (measured to 9×9 Sudoku), and is <b>differentiable</b> — trainable through</div></div>
     <div class="step" style="border-left-color:#2bb673;padding:18px 26px"><div class="t" style="font-size:27px">✅ <b>+26 pts</b> as a semi-supervised signal on a hard rule, when labels are scarce</div></div>
     <div class="step" style="border-left-color:#E69F00;padding:18px 26px"><div class="t" style="font-size:27px">⚖️ <b>Ties</b> — does <i>not</i> beat an exact solver on raw accuracy</div></div>
     <div class="step" style="border-left-color:#D55E00;padding:18px 26px"><div class="t" style="font-size:27px">❌ <b>No free lunch</b> — with full labels and easy rules, it's a wash</div></div>
   </div>
   <div class="spacer"></div>
-  <div class="foot"><span>What the experiments actually show</span><span class="n">09</span></div>
+  <div class="foot"><span>What the experiments actually show</span><span class="n">12</span></div>
 </div>
 
-<!-- 10 — HONEST FRAMING -->
+<!-- 13 — HONEST FRAMING -->
 <div class="slide">
   <div class="eyebrow">Straight talk</div>
   <h2 style="margin-top:22px">What this is (and isn't)</h2>
@@ -202,10 +242,10 @@
   <div class="spacer"></div>
   <p class="big">Scaling the idea toward language models is the road ahead — the vision, not a result.</p>
   <div class="spacer"></div>
-  <div class="foot"><span>Honest scope</span><span class="n">10</span></div>
+  <div class="foot"><span>Honest scope</span><span class="n">13</span></div>
 </div>
 
-<!-- 10 — CTA -->
+<!-- 14 — CTA -->
 <div class="slide">
   <div class="eyebrow">Try it · read it · build with it</div>
   <h2 style="margin-top:24px">Have a look 👇</h2>
@@ -219,7 +259,7 @@
   <p class="big">If your team fights constraint-satisfaction on AI outputs — configs, forms, compliance — I'd love to compare notes.</p>
   <div class="swipe" style="margin-top:24px">— Teo Qing Cong Eugene · linkedin.com/in/eugene-teo</div>
   <div class="spacer"></div>
-  <div class="foot"><span>ThermoLogic</span><span class="n">11</span></div>
+  <div class="foot"><span>ThermoLogic</span><span class="n">14</span></div>
 </div>
 
 </body>
