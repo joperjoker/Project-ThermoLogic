@@ -27,9 +27,14 @@ from thermologic import (
     LogicEnergy,
     NeuralProposer,
     TNorm,
+    UnsatisfiableError,
+    crisp_violations,
     forward_chaining,
+    guaranteed_repair,
     implies,
+    min_conflicts_repair,
     repair_beliefs,
+    rule_holds,
 )
 
 
@@ -258,6 +263,81 @@ class TestLogicEnergyAPI(unittest.TestCase):
         clone = LogicEnergy.load(path)
         self.assertEqual(clone.to_dict(), self.guard.to_dict())
         os.remove(path)
+
+
+class TestDiscreteGuarantee(unittest.TestCase):
+    """The crisp min-conflicts backstop and UNSAT detection."""
+
+    def setUp(self) -> None:
+        self.atoms = ["public", "pii", "admin", "enc", "log", "mfa", "backup"]
+        self.rules = [
+            implies(["pii"], "enc", name="pii-enc"),
+            implies(["pii"], "public", negate_consequent=True, name="pii-not-public"),
+            implies(["public"], "log", name="public-log"),
+            implies(["admin"], "mfa", name="admin-mfa"),
+            implies(["pii"], "backup", name="pii-backup"),
+        ]
+        self.g = LogicEnergy(self.rules, atom_names=self.atoms)
+        self.intent = ["public", "pii", "admin"]
+
+    def test_rule_holds_semantics(self) -> None:
+        r = ImplicationRule((Literal(0),), Literal(1), "a->b")
+        self.assertTrue(rule_holds(r, [True, True]))
+        self.assertFalse(rule_holds(r, [True, False]))
+        self.assertTrue(rule_holds(r, [False, False]))  # body false ⇒ vacuously true
+
+    def test_guarantee_returns_verified_valid(self) -> None:
+        out = torch.zeros(1, 7)
+        out[0, 2] = 1.0  # admin, no mfa
+        rep = self.g.repair(out, fixed=self.intent, guarantee=True)
+        self.assertTrue(bool(self.g.is_consistent(rep, crisp=True).all()))
+        self.assertEqual(float(rep[0, 5]), 1.0)  # mfa turned on
+
+    def test_unsat_is_proven_with_core(self) -> None:
+        bad = torch.zeros(1, 7)
+        bad[0, 0] = 1.0  # public
+        bad[0, 1] = 1.0  # pii  → conflict with "pii-not-public"
+        with self.assertRaises(UnsatisfiableError) as ctx:
+            self.g.repair(bad, fixed=self.intent, guarantee=True)
+        self.assertIn("pii-not-public", ctx.exception.core)
+
+    def test_satisfiability_status(self) -> None:
+        bad = torch.zeros(1, 7)
+        bad[0, 0] = bad[0, 1] = 1.0
+        self.assertEqual(self.g.satisfiability(bad, fixed=self.intent)[0].status, "unsat")
+        ok = torch.zeros(1, 7)
+        ok[0, 2] = 1.0
+        self.assertIn(self.g.satisfiability(ok, fixed=self.intent)[0].status,
+                      ("repaired", "already_valid"))
+
+    def test_solve_completes_partial_observation(self) -> None:
+        sol = self.g.solve({"admin": True, "pii": True})
+        self.assertTrue(bool(self.g.is_consistent(sol, crisp=True).all()))
+        # pii forces enc, backup, and not-public; admin forces mfa.
+        d = {n: bool(sol[0, i] > 0.5) for i, n in enumerate(self.atoms)}
+        self.assertTrue(d["enc"] and d["backup"] and d["mfa"] and not d["public"])
+
+    def test_solve_raises_on_unsatisfiable_observations(self) -> None:
+        with self.assertRaises(UnsatisfiableError):
+            self.g.solve({"pii": True, "public": True})
+
+    def test_soundness_never_reports_false_valid(self) -> None:
+        """Randomized: a reported-valid state must have zero crisp violations."""
+        import random
+        rng = random.Random(0)
+        for _ in range(40):
+            n = rng.randint(3, 7)
+            names = [f"a{i}" for i in range(n)]
+            rules = []
+            for _ in range(rng.randint(2, 6)):
+                body = Literal(rng.randrange(n), rng.random() < 0.3)
+                head = Literal(rng.randrange(n), rng.random() < 0.5)
+                rules.append(ImplicationRule((body,), head, f"r{len(rules)}"))
+            kb = KnowledgeBase(tuple(names), tuple(rules), derived_atoms=tuple(range(n)))
+            init = [rng.random() < 0.5 for _ in range(n)]
+            res = guaranteed_repair(kb, init, [False] * n, max_iters=500, restarts=8)
+            if res.is_valid:
+                self.assertEqual(crisp_violations(kb, res.state), [])
 
 
 if __name__ == "__main__":

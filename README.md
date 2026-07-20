@@ -41,7 +41,10 @@ guard = LogicEnergy(
 out = torch.tensor([[1.0, 0.0, 1.0, 1.0]])   # free plan + SSO + >5 seats (invalid)
 guard.score(out)        # -> tensor([...])  label-free inconsistency signal (>0)
 guard.violations(out)   # -> [['sso⇒enterprise', 'free⇒≤5 seats']]
-guard.repair(out, budget=60)   # -> nearest rule-satisfying configuration
+guard.repair(out, budget=60)              # soft: nearest rule-satisfying configuration
+guard.repair(out, guarantee=True)         # hard: VERIFIED valid, or raises UnsatisfiableError
+guard.solve({"sso_enabled": True})        # complete a partial config to a valid one
+guard.satisfiability(out)                 # per-sample status: repaired / unsat (+ conflict core)
 ```
 
 ## What's inside
@@ -50,6 +53,7 @@ guard.repair(out, budget=60)   # -> nearest rule-satisfying configuration
 |---|---|
 | Energy = logical inconsistency (label-free) | `score()` — a hallucination/trust signal, no ground truth needed |
 | Test-time repair pulls outputs to validity | `repair()` — fix an output to the nearest valid state |
+| Soft penalty → **hard guarantee** (§6.6) | `repair(guarantee=True)` / `solve()` — verified-valid or a *proof* of conflict |
 | Reasoning depth = test-time compute | `budget=` — a "thinking" dial; deeper rules need more |
 
 **Headline numbers** (11-atom benchmark, unseen-world test, 5 seeds): a plain
@@ -101,7 +105,7 @@ Run everything at once: `./reproduce.sh`.
 
 | Path | Role |
 |---|---|
-| `thermologic/` | The library: `api.py` (`LogicEnergy`), `logic_engine.py` (DTP / t-norms), `model.py` (EBM, repair), `data.py` |
+| `thermologic/` | The library: `api.py` (`LogicEnergy`), `logic_engine.py` (DTP / t-norms), `model.py` (EBM, soft repair), `solver.py` (discrete hard-guarantee backstop), `data.py` |
 | `examples/config_validator.py` | Worked use case — config validation via score/repair |
 | `experiments.py` | Reproducible experiment battery → `figures/`, `results/metrics.json` |
 | `train.py` · `run.sh` | Autonomous training pipeline |

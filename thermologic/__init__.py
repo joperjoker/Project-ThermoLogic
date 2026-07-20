@@ -18,7 +18,7 @@ Quick start
 tensor([True])
 """
 
-from thermologic.api import LogicEnergy, atom_index, implies
+from thermologic.api import LogicEnergy, UnsatisfiableError, atom_index, implies
 from thermologic.data import (
     Dataset,
     WorldSplit,
@@ -43,6 +43,13 @@ from thermologic.model import (
     ThermoLogicLoss,
     repair_beliefs,
 )
+from thermologic.solver import (
+    GuaranteeResult,
+    crisp_violations,
+    guaranteed_repair,
+    min_conflicts_repair,
+    rule_holds,
+)
 
 __version__ = "0.1.0"
 
@@ -63,6 +70,12 @@ __all__ = [
     "LossBreakdown",
     "repair_beliefs",
     "RepairResult",
+    "UnsatisfiableError",
+    "GuaranteeResult",
+    "guaranteed_repair",
+    "min_conflicts_repair",
+    "crisp_violations",
+    "rule_holds",
     "Dataset",
     "WorldSplit",
     "enumerate_worlds",

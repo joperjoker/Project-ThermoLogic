@@ -42,8 +42,18 @@ from thermologic.logic_engine import (
     TNorm,
 )
 from thermologic.model import EnergyBasedModel, NeuralProposer, RepairResult, repair_beliefs
+from thermologic.solver import GuaranteeResult, crisp_violations, guaranteed_repair
 
-__all__ = ["LogicEnergy", "implies", "atom_index"]
+__all__ = ["LogicEnergy", "implies", "atom_index", "UnsatisfiableError"]
+
+
+class UnsatisfiableError(ValueError):
+    """Raised by :meth:`LogicEnergy.solve` / guaranteed repair when no valid state
+    exists under the fixed atoms. Carries the conflicting rule names in ``core``."""
+
+    def __init__(self, message: str, core: Optional[List[str]] = None) -> None:
+        super().__init__(message)
+        self.core: List[str] = core or []
 
 RuleLike = Union[ImplicationRule, "Tuple"]
 
@@ -281,6 +291,7 @@ class LogicEnergy:
         verify: bool = False,
         max_budget: int = 480,
         return_trace: bool = False,
+        guarantee: bool = False,
     ) -> Union[Tensor, RepairResult]:
         """Repair an output to the nearest rule-satisfying state (energy descent).
 
@@ -318,6 +329,15 @@ class LogicEnergy:
             trajectory) instead of just the repaired tensor. Note its ``beliefs``
             field is the soft (un-snapped) state.
 
+        guarantee:
+            If ``True``, back the soft energy descent with a **discrete** solver
+            (min-conflicts local search) so the returned state is *verified*
+            crisp-valid — closing the "soft energy is expensive, not impossible"
+            gap. Implies ``snap=True``. Raises :class:`UnsatisfiableError` if a
+            sample is *proven* to have no valid completion under ``fixed`` (with
+            the conflicting rule names), or ``RuntimeError`` if the solver cannot
+            reach validity within its budget and UNSAT was not proven.
+
         Returns
         -------
         Tensor or RepairResult
@@ -336,6 +356,26 @@ class LogicEnergy:
                 parsimony_weight=parsimony, optimizer=optimizer,
                 log_every=max(1, steps // 20),
             )
+
+        if guarantee:
+            warm = _run(budget).beliefs if budget > 0 else batch
+            fmask = [bool(fixed_mask[a] > 0.5) for a in range(self.num_atoms)]
+            rows: List[Tensor] = []
+            for i in range(warm.shape[0]):
+                init = [bool(warm[i, a] > 0.5) for a in range(self.num_atoms)]
+                res = guaranteed_repair(self.kb, init, fmask)
+                if res.status == "unsat":
+                    names = [self.kb.rules[j].name for j in (res.core or [])]
+                    raise UnsatisfiableError(
+                        f"sample {i} has no valid completion under the fixed atoms; "
+                        f"conflicting rule(s): {names}", core=names)
+                if not res.is_valid:
+                    raise RuntimeError(
+                        f"guaranteed repair could not reach a valid state for sample {i} "
+                        f"(residual violations: {len(res.violations)}); raise max_iters/restarts "
+                        f"or check the rule set")
+                rows.append(torch.tensor([1.0 if v else 0.0 for v in res.state]))
+            return torch.stack(rows)
 
         result = _run(budget)
         if verify:
@@ -356,3 +396,70 @@ class LogicEnergy:
             return result
         beliefs = result.beliefs
         return (beliefs > 0.5).float() if snap else beliefs
+
+    # -- discrete guarantees ----------------------------------------------- #
+    def satisfiability(
+        self,
+        outputs: Optional[Tensor] = None,
+        fixed: Optional[Sequence[Union[int, str]]] = None,
+        max_iters: int = 2000,
+        restarts: int = 12,
+        seed: int = 0,
+    ) -> List[GuaranteeResult]:
+        """Per-sample discrete satisfiability of the rules under the fixed atoms.
+
+        Returns a :class:`GuaranteeResult` per sample whose ``status`` is one of
+        ``already_valid`` / ``repaired`` / ``unsat`` / ``unknown`` (see
+        :class:`thermologic.solver.GuaranteeResult`). Sound in both directions: a
+        ``repaired``/``already_valid`` state is genuinely valid, and ``unsat`` is a
+        proof — never a guess. ``outputs`` (thresholded) seeds the search; if
+        omitted the all-false state is used.
+        """
+        if outputs is None:
+            batch = torch.zeros(1, self.num_atoms)
+        else:
+            batch = self._as_batch(outputs)
+        fmask = [False] * self.num_atoms
+        if fixed:
+            for a in fixed:
+                fmask[atom_index(a, self.atom_names)] = True
+        results: List[GuaranteeResult] = []
+        for i in range(batch.shape[0]):
+            init = [bool(batch[i, a] > 0.5) for a in range(self.num_atoms)]
+            results.append(guaranteed_repair(self.kb, init, fmask,
+                                             max_iters=max_iters, restarts=restarts, seed=seed))
+        return results
+
+    def solve(
+        self,
+        observations: Optional[Dict[str, bool]] = None,
+        seed: int = 0,
+        max_iters: int = 2000,
+        restarts: int = 12,
+    ) -> Tensor:
+        """Find one **verified-valid** crisp assignment consistent with the given
+        atom observations (held fixed), or raise :class:`UnsatisfiableError`.
+
+        Unlike :meth:`repair`, this needs no model output — it is a small built-in
+        constraint solver over the rule set, useful for "complete this partial
+        configuration to a valid one" tasks.
+        """
+        observations = observations or {}
+        init = torch.zeros(1, self.num_atoms)
+        fmask = [False] * self.num_atoms
+        for name, val in observations.items():
+            idx = atom_index(name, self.atom_names)
+            init[0, idx] = 1.0 if val else 0.0
+            fmask[idx] = True
+        state = [bool(init[0, a] > 0.5) for a in range(self.num_atoms)]
+        res = guaranteed_repair(self.kb, state, fmask, max_iters=max_iters, restarts=restarts, seed=seed)
+        if res.status == "unsat":
+            names = [self.kb.rules[j].name for j in (res.core or [])]
+            raise UnsatisfiableError(
+                f"no valid assignment satisfies the observations; conflicting rule(s): {names}",
+                core=names)
+        if not res.is_valid:
+            raise RuntimeError(
+                f"solver could not find a valid assignment (residual violations: "
+                f"{len(res.violations)}); raise max_iters/restarts")
+        return torch.tensor([[1.0 if v else 0.0 for v in res.state]])
