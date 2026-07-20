@@ -88,6 +88,42 @@ def train(kb, engine, ebm, n_lab, mode, seed, epochs=400, w=1.0, n_unlab=2000):
     return prop
 
 
+def weight_sweep(kb, engine, ebm, n_lab=64, seeds=(0, 1, 2), weights=(0.5, 1.0, 2.0, 4.0)):
+    """Fairness check: does tuning the loss weight let Semantic Loss catch up?
+
+    Both losses have different natural scales, so a single matched weight is not a
+    fair verdict. We sweep the weight for both arms and report the curve. (Finding:
+    the fuzzy energy is weight-robust; Semantic Loss peaks at a small weight and
+    degrades as it grows — so the ranking is not a weighting artifact.)
+    """
+    res = {"n_lab": n_lab, "weights": list(weights), "energy": [], "semantic": []}
+    print("\nWEIGHT SENSITIVITY (n_lab=%d, mean acc over %d seeds):" % (n_lab, len(seeds)))
+    print(f"  {'w':>6}{'energy (ours)':>15}{'semantic (Xu)':>15}")
+    for w in weights:
+        e = statistics.mean(parity_acc(train(kb, engine, ebm, n_lab, "energy", s, w=w),
+                                       torch.Generator().manual_seed(9000 + s)) for s in seeds)
+        sl = statistics.mean(parity_acc(train(kb, engine, ebm, n_lab, "semantic", s, w=w),
+                                        torch.Generator().manual_seed(9000 + s)) for s in seeds)
+        res["energy"].append(e); res["semantic"].append(sl)
+        print(f"  {w:>6}{e:>15.3f}{sl:>15.3f}")
+    with open(os.path.join(RES_DIR, "semisup_sl_weight.json"), "w", encoding="utf-8") as fh:
+        json.dump(res, fh, indent=2)
+
+    fig, ax = plt.subplots(figsize=(7.0, 4.5))
+    ax.plot(res["weights"], res["energy"], "s-", color="#CC79A7", lw=2, label="+ fuzzy energy (ours)")
+    ax.plot(res["weights"], res["semantic"], "^-", color="#0072B2", lw=2, label="+ semantic loss (Xu et al.)")
+    ax.set_xlabel("loss weight w on the unlabelled term")
+    ax.set_ylabel(f"parity-bit accuracy (n={n_lab} labels)")
+    ax.set_title("Robustness to the loss weight (parity, 3 seeds)")
+    ax.legend(fontsize=8); ax.grid(alpha=0.25)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(os.path.join(FIG_DIR, "fig_semanticloss_weight.png"), dpi=140, bbox_inches="tight")
+    plt.close(fig)
+    print("wrote figures/fig_semanticloss_weight.png")
+
+
 def main():
     os.makedirs(FIG_DIR, exist_ok=True)
     os.makedirs(RES_DIR, exist_ok=True)
@@ -138,6 +174,7 @@ def main():
     fig.savefig(out, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print("wrote", out)
+    weight_sweep(kb, engine, ebm)
     print("=" * 74)
 
 

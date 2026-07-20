@@ -1,0 +1,34 @@
+[
+  {
+    "problem": "Latin 3x3",
+    "atoms": 27,
+    "rules": 81,
+    "valid": 12,
+    "valid_exact": true,
+    "repair_s": 1.229072171000098
+  },
+  {
+    "problem": "Latin 4x4",
+    "atoms": 64,
+    "rules": 288,
+    "valid": 576,
+    "valid_exact": true,
+    "repair_s": 0.5965330330000143
+  },
+  {
+    "problem": "Latin 5x5",
+    "atoms": 125,
+    "rules": 750,
+    "valid": 161280,
+    "valid_exact": true,
+    "repair_s": 1.6531344770000942
+  },
+  {
+    "problem": "Sudoku 9x9",
+    "atoms": 729,
+    "rules": 11664,
+    "valid": 6670903752021072936960,
+    "valid_exact": true,
+    "repair_s": 34.78939203200002
+  }
+]

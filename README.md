@@ -66,9 +66,12 @@ python experiments_baselines.py          # energy repair vs. projection baseline
 python experiments_through_repair.py     # train THROUGH the repair (the differentiability win)
 python experiments_supervision.py        # pre- vs post-repair supervision (honest null result)
 python experiments_semisup.py            # logic as a semi-supervised loss on a hard rule (+26 pts)
+python experiments_semanticloss.py       # novelty check: fuzzy energy vs. Semantic Loss + weight sweep (§5.11)
 python benchmarks/cloud_config.py        # harder first-order-grounded benchmark (20 atoms, 432 worlds)
 python benchmarks/latin_square.py        # external solver head-to-head where our method loses (§6.3)
+python benchmarks/scaling.py             # measured scaling: Latin 3/4/5 + 9x9 Sudoku (§6.4)
 python integration_demo.py               # LogicEnergy as a guardrail on a plain model (end-to-end)
+python examples/llm_json_guardrail.py    # model-agnostic guardrail on LLM-style JSON output (§6.5)
 python examples/config_validator.py      # worked use case: SaaS config validator
 python -m unittest discover -s tests     # unit tests
 ```
@@ -84,9 +87,12 @@ Every figure and number regenerates from a named script (fixed seeds, CPU):
 | Train through the repair (§5.8) | `experiments_through_repair.py` | — (console) |
 | Pre- vs post-repair supervision, null (§5.9) | `experiments_supervision.py` | `fig_supervision` |
 | Semi-supervised hard rule, +26 pts (§5.10) | `experiments_semisup.py` | `fig_semisup` |
+| Novelty check vs. Semantic Loss + weight sweep (§5.11) | `experiments_semanticloss.py` | `fig_semanticloss`, `fig_semanticloss_weight` |
 | Harder first-order-grounded benchmark (§6.1) | `benchmarks/cloud_config.py` | — (console) |
 | End-to-end guardrail integration (§6.2) | `integration_demo.py` | `fig_integration` |
 | External Latin-square solver head-to-head — an honest loss (§6.3) | `benchmarks/latin_square.py` | `fig_latin` |
+| Measured scaling: projection vs. energy repair to 9×9 Sudoku (§6.4) | `benchmarks/scaling.py` | `fig_scaling` |
+| Model-agnostic guardrail on LLM JSON (§6.5) | `examples/llm_json_guardrail.py` | — (console) |
 | Plain-language slide charts | `assets/make_slide_figures.py` | `slide_depthwave`, `slide_baselines` |
 
 Run everything at once: `./reproduce.sh`.

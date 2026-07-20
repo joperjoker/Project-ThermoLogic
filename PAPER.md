@@ -48,12 +48,17 @@ per hop for Łukasiewicz vs `~1.0` for Gödel/Product). We then ask *"why not ju
 project onto the nearest valid state with a solver?"* and answer it honestly:
 **(4)** an exact projection **ties** energy repair on accuracy (`0.969` vs
 `0.970`) — the energy's edge is instead **linear scaling** where enumeration
-explodes (`2ᵈ`) and **differentiability**, which lets the repair be *trained
-through* (a projection gives zero gradient). Finally we map the boundary of that
+explodes (measured directly: the enumerate-and-project cost grows ~20 orders of
+magnitude from a 3×3 Latin square to 9×9 Sudoku while energy-repair time grows
+~30×) and **differentiability**, which lets the repair be *trained through* (a
+projection gives zero gradient). Finally we map the boundary of that
 benefit: **(5)** with full labels and an easily-learned target it is a **null**
 (no generalization gain), but as a semi-supervised loss on a *hard* target
 (parity) it lifts accuracy by up to **+26 points** when labels are scarce — the
-regime theory predicts. **(6)** On an *external, non-circular* benchmark we did
+regime theory predicts, and a head-to-head against **Semantic Loss** (Xu et al.,
+2018) confirms this is a *distinct* mechanism, not a re-derivation: it matches or
+beats exact Semantic Loss here and is far more robust to the loss weight.
+**(6)** On an *external, non-circular* benchmark we did
 not author — order-4 Latin squares — the method **loses on both axes**: an exact
 solver dominates soft energy repair at runtime (100% vs 3.6% validity) and the
 logic loss gives no training-time lift, because those constraints are
@@ -230,6 +235,8 @@ CPU-deterministic). Rather than argue the method is uniformly good, we map
 | Can you train *through* it? | **Yes** — a projection gives zero gradient | §5.8 |
 | Does training-through-repair improve generalization? | **No** (full labels, easy target — a null) | §5.9 |
 | Does the logic ever improve learning? | **Yes** — semi-supervised, hard target: **+26 pts** | §5.10 |
+| Is that win just a re-derivation of Semantic Loss? | **No** — distinct; matches/beats it and is far more weight-robust | §5.11 |
+| Does the linear-scaling claim hold empirically? | **Yes** — projection cost `20 orders` vs repair `~30×` to 9×9 Sudoku | §6.4 |
 | On an external, non-circular benchmark (Latin squares)? | **No** — a solver dominates at runtime; the loss gives no lift | §6.3 |
 
 ### 5.1 Logical energy as test-time compute (the propagation wave)
@@ -474,6 +481,52 @@ inert when the target is easily learned and labels are plentiful (§5.9), and
 valuable when labels are scarce and the target is hard (§5.10) — an honest,
 predictable characterization rather than a blanket "it helps" claim.
 
+### 5.11 Is it just Semantic Loss? A novelty check
+
+The §5.10 win invites the obvious challenge: a logic-derived loss on unlabelled
+data is precisely what **Semantic Loss** (Xu et al., ICML 2018) already does, as
+the negative log of the probability that an independent-Bernoulli draw of the
+network's outputs satisfies the constraint — an exact *weighted model count*
+(WMC). Is our fuzzy t-norm *energy* just a re-derivation? We test it directly
+(`experiments_semanticloss.py`): three arms on the **identical** task, network,
+and unlabelled data — only the unlabelled-batch loss differs. For parity the
+constraint has just 16 models, so the WMC (hence Semantic Loss) is computed
+*exactly*, not approximated.
+
+**Figure 11 — Fuzzy energy vs. exact Semantic Loss on the same semi-supervised task.**
+
+![Semantic Loss head-to-head](figures/fig_semanticloss.png)
+
+**Table 9 — Parity-bit accuracy: labels-only vs. + fuzzy energy vs. + Semantic Loss (3 seeds, matched weight w=1).**
+
+| # labels | labels-only | + fuzzy energy (ours) | + semantic loss (Xu et al.) |
+|---|---|---|---|
+| 16 | `0.508` | **`0.569`** | `0.507` |
+| 32 | `0.578` | **`0.758`** | `0.608` |
+| 64 | `0.651` | **`0.909`** | `0.831` |
+| 128 | `0.902` | **`0.985`** | `0.921` |
+
+The two losses are **not** the same object, and on this task the fuzzy energy is
+the stronger of the two. Because the losses have different natural scales, a
+single matched weight is not a fair verdict, so we sweep the loss weight for both
+(Figure 12): the fuzzy energy is **weight-robust** (accuracy `0.90–0.92` across
+`w ∈ [0.5, 4]`), whereas Semantic Loss **peaks at a small weight** (`0.875` at
+`w=0.5`) and **degrades sharply** as the weight grows (`0.566` at `w=4`). Even at
+its best-tuned weight, Semantic Loss stays below the fuzzy energy here. So the gap
+is not a weighting artifact.
+
+**Figure 12 — Weight sensitivity: the fuzzy energy is robust; Semantic Loss is not (parity, 64 labels).**
+
+![Weight robustness](figures/fig_semanticloss_weight.png)
+
+The honest, scoped reading: the fuzzy energy is a *distinct* mechanism from
+Semantic Loss (a per-rule exponential penalty vs. a single global −log WMC), and
+on this hard-target, scarce-label task it is at least as accurate and markedly
+more robust to its one hyperparameter. We do **not** claim general superiority
+over Semantic Loss — this is one task, one architecture — but the "it's merely a
+re-derivation" concern is retired, and the practical property (no weight tuning)
+is a genuine convenience.
+
 ---
 
 ## 6. The product
@@ -517,7 +570,7 @@ model" case. On unseen cloud configs the plain model emits **13.6% policy-
 violating** outputs; the guardrail flags every one, with the exact broken rule,
 **no labels** — and `repair` restores **100% consistency**.
 
-**Figure 11 — LogicEnergy as a guardrail: flag every non-compliant config, then repair.**
+**Figure 13 — LogicEnergy as a guardrail: flag every non-compliant config, then repair.**
 
 ![Integration](figures/fig_integration.png)
 
@@ -546,7 +599,7 @@ is the fairest possible test, and we report the result whichever way it falls.
 
 It falls *against* us, on **both** axes, and that is worth stating plainly.
 
-**Table 8 — Latin squares: three ways to enforce constraints on one fixed net (σ=0.9, 2 000 test grids).**
+**Table 10 — Latin squares: three ways to enforce constraints on one fixed net (σ=0.9, 2 000 test grids).**
 
 | Method | per-cell acc | grid-exact | valid square |
 |---|---|---|---|
@@ -554,7 +607,7 @@ It falls *against* us, on **both** axes, and that is worth stating plainly.
 | **ML + exact solver** (nearest of 576 valid grids) | **0.647** | **0.269** | **1.000** |
 | ML + energy repair (ours) | 0.633 | 0.027 | 0.036 |
 
-**Figure 12 — The honest head-to-head. (a) At runtime an exact solver dominates soft energy repair; (b) at training time the logic loss gives no lift on this task.**
+**Figure 14 — The honest head-to-head. (a) At runtime an exact solver dominates soft energy repair; (b) at training time the logic loss gives no lift on this task.**
 
 ![Latin squares](figures/fig_latin.png)
 
@@ -590,6 +643,57 @@ scaling* consistency layer that is worth reaching for when you need a gradient
 (§5.8), when the constraint carries target signal under scarce labels (§5.10),
 or when enumeration is infeasible — and worth skipping when a solver fits."
 
+### 6.4 When enumeration *is* infeasible: measured scaling
+
+§5.7 argues energy repair scales linearly where an enumerate-and-project baseline
+grows as the number of valid states. §6.3 shows that when that number is small
+(576), the projection baseline wins. The complementary claim — that the projection
+baseline *dies* while energy repair keeps running — was argued but never measured.
+We measure it (`benchmarks/scaling.py`) by sweeping problem size: **Latin squares
+of order 3, 4, 5** (12, 576, 161 280 valid grids) and, as a capstone, **9×9
+Sudoku** (~6.67×10²¹ valid grids), recording the projection baseline's enumeration
+cost against energy-repair wall-clock at a fixed batch and step budget.
+
+**Table 11 — Scaling: enumeration cost vs. energy-repair wall-clock.**
+
+| Problem | atoms | rules | valid states (projection cost) | energy-repair time |
+|---|---|---|---|---|
+| Latin 3×3 | 27 | 81 | 12 | 1.2 s |
+| Latin 4×4 | 64 | 288 | 576 | 0.6 s |
+| Latin 5×5 | 125 | 750 | 161 280 | 1.7 s |
+| **Sudoku 9×9** | 729 | 11 664 | **~6.67×10²¹** | **34.8 s** |
+
+**Figure 15 — Projection cost explodes ~20 orders of magnitude; energy-repair cost stays polynomial.**
+
+![Scaling](figures/fig_scaling.png)
+
+Across the sweep the enumerate-and-project cost climbs **~20 orders of magnitude**
+while energy-repair wall-clock grows **~30×** (roughly linearly in the number of
+rules). At Sudoku scale, enumerating the valid grids to project onto is flatly
+impossible, yet energy repair still runs in seconds on the same machinery, with no
+problem-specific search code. **The honest caveat, kept prominent:** this is *not*
+"solvers fail" — a real CP/SAT solver exploits constraint propagation and still
+solves Sudoku instantly. What dies at scale is the *enumerate-and-project*
+baseline of §5.7; the differentiable energy is the fallback that survives when you
+have no bespoke solver and need a gradient-compatible, generic consistency layer.
+
+### 6.5 A model-agnostic guardrail on LLM-style JSON output
+
+Finally we make the "bolt it after any model" pitch concrete for the most common
+real case — an LLM emitting a structured configuration
+(`examples/llm_json_guardrail.py`). The adapter consumes a plain `dict`, so it is
+identical behind any model (no live LLM is called; the inputs are representative
+assistant outputs). It maps JSON → atoms, scores logical energy, names the broken
+policy rules, and repairs **only the safety settings** while holding the user's
+*intent* fields fixed. This draws a practically important line the raw mechanism
+gives for free: a config that is inconsistent because two *intent* fields
+contradict each other (e.g. a bucket that is *both* public *and* stores PII)
+cannot be auto-repaired without changing the request, so the guardrail **escalates
+it as an "intent conflict" for a human** rather than silently rewriting intent. On
+four representative outputs it passes the one compliant config unchanged,
+auto-repairs two fixable misconfigurations to full consistency, and flags one
+intent conflict — all label-free.
+
 ---
 
 ## 7. Discussion & limitations
@@ -598,6 +702,15 @@ or when enumeration is infeasible — and worth skipping when a solver fits."
   consistency guarantee and repair, not beating supervised learning on accuracy.
 - **Not better than a solver on accuracy.** An exact projection ties or beats
   energy repair (§5.7); the differentiators are scaling and differentiability.
+- **The scaling differentiator is measured, not just asserted.** From a 3×3 Latin
+  square to 9×9 Sudoku the enumerate-and-project cost grows ~20 orders of
+  magnitude while energy-repair time grows ~30× (§6.4) — but a real CP/SAT solver
+  still scales too, so the niche is "generic, gradient-compatible, no bespoke
+  solver," not "solvers fail."
+- **Distinct from Semantic Loss.** On the semi-supervised task the fuzzy energy is
+  a different object from Xu et al.'s Semantic Loss and here is at least as
+  accurate and much more weight-robust (§5.11); we do not claim general
+  superiority (one task, one architecture).
 - **Differentiability is a capability, not always a benefit.** Training through the
   repair enables supervision a projection cannot (§5.8), but gives no measurable
   generalization gain when full labels are available (§5.9, a null result).
@@ -641,9 +754,12 @@ honest, reproducible substrate — and a usable tool — for constraint-aware ML
 ```bash
 ./run.sh                                  # train pipeline
 python experiments.py                     # regenerate all figures + metrics.json
+python experiments_semanticloss.py        # §5.11 fuzzy energy vs. Semantic Loss + weight sweep
 python benchmarks/cloud_config.py         # §6.1 first-order-grounded benchmark
 python benchmarks/latin_square.py         # §6.3 external solver head-to-head
+python benchmarks/scaling.py              # §6.4 measured scaling (Latin 3/4/5 + 9x9 Sudoku)
 python integration_demo.py                # §6.2 guardrail on a plain model
+python examples/llm_json_guardrail.py     # §6.5 model-agnostic guardrail on LLM JSON
 python -m unittest discover -s tests      # 23 tests
 python examples/config_validator.py       # worked use case
 ```

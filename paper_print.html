@@ -84,10 +84,12 @@
   depth, and the t-norm sets the propagation speed (~3.4 descent steps/hop for &#321;ukasiewicz vs ~1.0 for
   G&ouml;del/Product). (4) Asked &ldquo;why not just project onto the nearest valid state with a solver?&rdquo;, we
   answer honestly: an exact projection <b>ties</b> on accuracy (0.969 vs 0.970) — the energy's edge is <b>linear
-  scaling</b> (a solver is 2<sup>d</sup>) and <b>differentiability</b> (it can be trained through; a projection
+  scaling</b> (measured: enumerate-and-project cost grows ~20 orders of magnitude from a 3×3 Latin square to 9×9
+  Sudoku while repair time grows ~30×) and <b>differentiability</b> (it can be trained through; a projection
   gives zero gradient). (5) That differentiability is a null for generalization with full labels, but as a
   semi-supervised loss on a <i>hard</i> target (parity) it lifts accuracy by up to <b>+26 points</b> when labels
-  are scarce. (6) On an <i>external, non-circular</i> benchmark we did not author — order-4 Latin squares — the
+  are scarce — and a head-to-head confirms this is a <i>distinct</i> mechanism from Semantic Loss (Xu et al., 2018),
+  matching or beating it here and far more robust to the loss weight. (6) On an <i>external, non-circular</i> benchmark we did not author — order-4 Latin squares — the
   method <b>loses on both axes</b>: an exact solver dominates soft energy repair at runtime (100% vs 3.6% valid)
   and the logic loss gives no training-time lift, because those constraints are permutation-symmetric and carry
   no signal about the target. The transferable rule: reach for the differentiable logic when you need a
@@ -240,6 +242,17 @@
   feed-forward parity accuracy by up to <b>+26 points</b> over labels-only (0.65 &#8594; 0.91 at 64 labels), with the
   gain largest when labels are scarce and vanishing once labels are plentiful. The precise boundary: the logic is
   inert when the target is easy and labels plentiful, and valuable when the target is hard and labels are few.</p>
+  <p><b>Is it just Semantic Loss?</b> A logic loss on unlabelled data is what Xu et al.'s <b>Semantic Loss</b>
+  (ICML 2018) already does, as −log of the exact weighted model count. We ran three arms on the identical parity
+  task (labels-only, + our fuzzy energy, + exact Semantic Loss). They are <i>not</i> the same object: at matched
+  weight the fuzzy energy is stronger (0.909 vs 0.831 vs 0.651 labels-only at 64 labels), and sweeping the loss
+  weight shows why the gap is not an artifact — the fuzzy energy is weight-robust (0.90–0.92 for w∈[0.5,4]) while
+  Semantic Loss peaks at a small weight and collapses to 0.57 as the weight grows. We claim no general superiority
+  (one task), but the &ldquo;merely a re-derivation&rdquo; concern is retired and needing no weight tuning is a real
+  convenience.</p>
+  <figure><img src="figures/fig_semanticloss.png" alt="fuzzy energy vs Semantic Loss" />
+    <figcaption>Figure 9. Novelty check: the fuzzy energy is a distinct mechanism from Semantic Loss and, on this
+    semi-supervised parity task at matched weight, at least as accurate — and far more robust to the loss weight.</figcaption></figure>
 
   <h2>5. The product</h2>
   <p>The mechanism ships as <code>thermologic</code>, a differentiable logic-energy layer that drops after any
@@ -264,9 +277,22 @@
   no signal about <i>which</i> value belongs in a cell. This sharpens the semi-supervised boundary above: the logic
   aids learning only when the constraint is <i>informative about the target</i> (parity), not merely satisfied by it.</p>
   <figure><img src="figures/fig_latin.png" alt="Latin-square head-to-head" />
-    <figcaption>Figure 9. The honest external head-to-head on Latin squares. (a) At runtime an exact solver
+    <figcaption>Figure 10. The honest external head-to-head on Latin squares. (a) At runtime an exact solver
     dominates soft energy repair; (b) at training time the logic loss gives no lift on this permutation-symmetric
     task. The method wins when you need a gradient, scale past enumeration, or scarce-label target signal — not here.</figcaption></figure>
+  <p><b>When enumeration <i>is</i> infeasible — measured scaling.</b> The flip side of the Latin loss: when the number
+  of valid states is large, the enumerate-and-project baseline dies while energy repair keeps running. Sweeping Latin
+  squares of order 3/4/5 (12 → 576 → 161 280 valid grids) up to <b>9×9 Sudoku</b> (~6.67×10²¹ valid grids), the
+  projection cost grows ~20 orders of magnitude while energy-repair wall-clock grows ~30× (1.2s → 34.8s). Honest
+  caveat kept prominent: this is <i>not</i> &ldquo;solvers fail&rdquo; — a real CP/SAT solver still cracks Sudoku
+  instantly; what dies is the enumerate-and-project baseline, and the differentiable energy is the generic,
+  gradient-compatible fallback that survives. A model-agnostic guardrail on LLM-style JSON
+  (<code>examples/llm_json_guardrail.py</code>) makes the product concrete: it repairs only <i>safety</i> settings,
+  holds user <i>intent</i> fixed, and escalates genuine intent conflicts (a public bucket that also stores PII) to a
+  human rather than silently rewriting the request.</p>
+  <figure><img src="figures/fig_scaling.png" alt="measured scaling" />
+    <figcaption>Figure 11. Measured scaling: the enumerate-and-project cost explodes ~20 orders of magnitude from a
+    3×3 Latin square to 9×9 Sudoku, while energy-repair wall-clock stays polynomial (~30×).</figcaption></figure>
 
   <h2>6. Discussion &amp; limitations</h2>
   <p>The honest value proposition is a label-free consistency guarantee and repair, not beating supervised learning
